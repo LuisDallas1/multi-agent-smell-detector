@@ -320,7 +320,7 @@ python scripts/generate_academic_figures.py
 ## 👨💻 Autor
 
 **Estevam** - Trabalho de Conclusão de Curso (TCC)  
-Engenharia de Software - 2024
+Engenharia de Software - 2025
 
 ## 📄 Licença
 
