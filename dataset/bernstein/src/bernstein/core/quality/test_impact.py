@@ -1,0 +1,1123 @@
+"""Incremental test impact analysis for quality gates and test tooling.
+
+Provides a typed analyzer used by the quality gate runner plus compatibility
+helpers for the legacy ``scripts/test_impact.py`` CLI contract.
+"""
+
+from __future__ import annotations
+
+import ast
+import hashlib
+import json
+import logging
+from contextlib import suppress
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, cast
+
+from typing_extensions import TypedDict
+
+logger = logging.getLogger(__name__)
+
+# Bumped whenever the shape or the derivation of a cached entry changes, so a
+# map built by an older rule is rebuilt rather than trusted. Cached "imports"
+# lists are alias-resolved at write time, so a change to alias discovery makes
+# every existing entry potentially short of edges even though its file hashes
+# still match.
+_ANALYZER_CACHE_VERSION = "4"
+_COMPAT_CACHE_VERSION = "5"
+_WORKFLOW_PATH_PREFIX = ".github/workflows/"
+
+# Upper bound on a harvested path literal. Long strings in a test are prose,
+# SQL, or embedded fixtures rather than paths; the bound keeps them out of the
+# index without having to decide what each one is.
+_MAX_PATH_LITERAL_LENGTH = 200
+
+# The two forms a test uses to reach a workflow file: the directory spelled out
+# as a posix path, or assembled from path segments (``Path(".github") /
+# "workflows" / name``). Matching both keys selection on what a test reads
+# rather than on what the test happens to be called.
+_WORKFLOW_DIR_LITERAL = _WORKFLOW_PATH_PREFIX.rstrip("/")
+_WORKFLOW_DIR_SEGMENTS = ('".github"', "'.github'")
+
+# A package can keep an old dotted import path alive without a physical shim
+# file by registering a ``sys.meta_path`` finder backed by a
+# ``{short_name: real_dotted_module}`` table. The import then resolves, but the
+# name the importer wrote never appears on disk, so an import graph keyed on
+# literal dotted names has no edge from the real module to the file that
+# imports it under the old name.
+#
+# Which module-level dict literals count as such a table is decided by their
+# content, not by what they are bound to. An earlier version required the name
+# to end in ``REDIRECT_MAP``, which made renaming the table -- a refactor no
+# importer can observe and no reviewer would question -- silently delete
+# selection edges. The two content filters in ``discover_module_aliases`` are
+# what actually discriminate, and they are strictly safer than a name check:
+# an entry is kept only when its target is a real module on disk and its
+# legacy key is not. A key that names no real module can be imported only if
+# some redirect resolves it, so an entry harvested from a dict that is not a
+# redirect table describes an import nobody can successfully write, and
+# contributes nothing. The failure mode of guessing wrong is therefore an
+# unused map entry, never a dropped edge.
+
+# Bound on alias chain following. Chains are one hop today; the bound stops a
+# hand-written cycle in an alias table from hanging the index build.
+_ALIAS_CHAIN_LIMIT = 8
+
+# Inert repo-root files that never affect test outcomes. A change limited to
+# these paths does not force a full-suite fallback. Kept intentionally tiny:
+# docs/ and pyproject.toml are deliberately excluded so that a version bump or
+# documentation change still fails open to the full suite instead of selecting
+# zero tests.
+_FALLBACK_ALLOWLIST = frozenset({"LICENSE", ".gitignore"})
+
+
+type _JsonObject = dict[str, object]
+
+
+class AnalyzerCacheData(TypedDict):
+    """Typed payload for persisted analyzer cache data."""
+
+    graph: dict[str, list[str]]
+    reverse: dict[str, list[str]]
+    source_imports: dict[str, list[str]]
+    all_tests: list[str]
+
+
+def _file_hash(path: Path) -> str:
+    """Return a short content hash for a file.
+
+    Non-security: used purely as a cache fingerprint for the test-impact
+    analyzer. ``usedforsecurity=False`` documents that intent.
+    """
+    # nosemgrep: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+    return hashlib.sha1(path.read_bytes(), usedforsecurity=False).hexdigest()[:16]
+
+
+def _iter_project_packages(src_root: Path) -> set[str]:
+    """Return top-level import package names under ``src_root``."""
+    packages: set[str] = set()
+    if not src_root.exists():
+        return packages
+    for child in src_root.iterdir():
+        if child.is_dir():
+            packages.add(child.name)
+    return packages
+
+
+def _path_to_module(path: Path, src_root: Path) -> str:
+    """Map a source file path to its dotted module name."""
+    try:
+        rel = path.relative_to(src_root)
+    except ValueError:
+        return path.as_posix()
+    parts = list(rel.parts)
+    if not parts:
+        return ""
+    if parts[-1] == "__init__.py":
+        parts = parts[:-1]
+    elif parts[-1].endswith(".py"):
+        parts[-1] = parts[-1][:-3]
+    return ".".join(parts)
+
+
+def _normalize_string_list(raw: object) -> list[str]:
+    """Return string items from a JSON-compatible list value."""
+    if not isinstance(raw, list):
+        return []
+    items = cast("list[object]", raw)
+    return [item for item in items if isinstance(item, str)]
+
+
+def _normalize_mapping_list(raw: object) -> dict[str, list[str]]:
+    """Return a typed ``dict[str, list[str]]`` mapping from JSON data."""
+    if not isinstance(raw, dict):
+        return {}
+    raw_dict = cast("dict[object, object]", raw)
+    normalized: dict[str, list[str]] = {}
+    for key, value in raw_dict.items():
+        if isinstance(key, str):
+            normalized[key] = _normalize_string_list(value)
+    return normalized
+
+
+def _collect_imports_from_node(node: ast.AST, package_prefixes: set[str]) -> set[str]:
+    """Collect project-scoped import names from a single AST node."""
+    imports: set[str] = set()
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            top = alias.name.split(".", 1)[0]
+            if top in package_prefixes:
+                imports.add(alias.name)
+    elif isinstance(node, ast.ImportFrom):
+        module = node.module or ""
+        if module:
+            top = module.split(".", 1)[0]
+            if top in package_prefixes:
+                imports.add(module)
+    return imports
+
+
+def extract_project_imports(path: Path, package_prefixes: set[str]) -> set[str]:
+    """Extract imported project module names from a Python file."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return set()
+
+    imports: set[str] = set()
+    for node in ast.walk(tree):
+        imports.update(_collect_imports_from_node(node, package_prefixes))
+    return imports
+
+
+def _is_path_literal(value: str) -> bool:
+    """Return whether a string literal reads as a repo path or file name.
+
+    The discriminator is a dot in the final segment: ``AGENTS.md``,
+    ``docs/adapters/index.md`` and ``.importlinter`` qualify, bare directory
+    names like ``src`` do not. Requiring an extension is what keeps the index
+    from filling with prose; a bare directory name would key selection on words
+    common enough to select most of the suite.
+    """
+    if not value or len(value) > _MAX_PATH_LITERAL_LENGTH:
+        return False
+    if any(char.isspace() for char in value):
+        return False
+    if value.startswith(("http://", "https://")):
+        return False
+    # A repo path never carries a backslash here, while regex sources and
+    # path-traversal fixtures routinely do. Dropping them keeps regex fragments
+    # out of the index and removes the separator mismatch a normalising rule
+    # would otherwise have to reconcile against git's posix output.
+    if "\\" in value:
+        return False
+    return "." in value.rsplit("/", 1)[-1]
+
+
+def extract_path_literals(path: Path) -> set[str]:
+    """Return the repo paths a file names as string literals.
+
+    A structural guard reads its subject rather than importing it: the line
+    budget guard ``read_text()``s ``AGENTS.md`` files, the import-contract
+    guard parses ``.importlinter`` with ``configparser`` and ``registry.py``
+    with ``ast``, the README count guard regexes ``README.md``. None of that
+    produces an import edge, so a map built only from imports cannot connect a
+    diff that breaks such a guard to the guard that catches it.
+
+    Harvesting the string literals recovers the edge without asking the guard
+    to declare anything. A declaration would drift by the same mechanism that
+    makes this necessary -- nothing forces a new guard to add one -- whereas a
+    guard cannot read a path it does not name.
+
+    The literals are stored as written. Matching resolves them against every
+    suffix of the changed path, so ``AGENTS.md`` matches wherever that file
+    lives and ``contributing/render-freshness.md`` matches the file it names
+    under ``docs/``. A literal is therefore matched by any path ending in it at
+    a segment boundary, which can wake a guard for a same-suffix file in an
+    unrelated tree. That direction is deliberate: the cost is running a guard
+    that had nothing to check, while anchoring literals to the repository root
+    would drop the 15 literals in this repository that name a real file by a
+    partial path, and a dropped edge is the failure this map exists to remove.
+    """
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return set()
+
+    return {
+        stripped
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        for stripped in [node.value.strip().strip("/")]
+        if _is_path_literal(stripped)
+    }
+
+
+def _string_dict_literal(node: ast.expr) -> dict[str, str]:
+    """Return the ``str -> str`` pairs of a dict literal, ignoring the rest."""
+    if not isinstance(node, ast.Dict):
+        return {}
+    pairs: dict[str, str] = {}
+    for key, value in zip(node.keys, node.values, strict=False):
+        if (
+            isinstance(key, ast.Constant)
+            and isinstance(key.value, str)
+            and isinstance(value, ast.Constant)
+            and isinstance(value.value, str)
+        ):
+            pairs[key.value] = value.value
+    return pairs
+
+
+def _alias_tables_in_module(path: Path) -> dict[str, str]:
+    """Return the merged alias tables declared at module level in ``path``."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return {}
+
+    tables: dict[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            targets: list[ast.expr] = list(node.targets)
+            value: ast.expr | None = node.value
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+            value = node.value
+        else:
+            continue
+        if value is None:
+            continue
+        if any(isinstance(target, ast.Name) for target in targets):
+            tables.update(_string_dict_literal(value))
+    return tables
+
+
+def _real_module_names(src_root: Path) -> set[str]:
+    """Return the dotted names of every module that physically exists."""
+    if not src_root.exists():
+        return set()
+    names: set[str] = set()
+    for source_file in src_root.rglob("*.py"):
+        module = _path_to_module(source_file, src_root)
+        if module:
+            names.add(module)
+    return names
+
+
+def discover_module_aliases(src_root: Path) -> dict[str, str]:
+    """Return legacy dotted module names mapped to the module they resolve to.
+
+    The tables are read from the package ``__init__`` files that declare them
+    rather than imported, so discovery has no import side effects and works on
+    any source tree. An alias whose legacy name is also a real module on disk
+    is dropped: the redirect finders are appended to ``sys.meta_path``, so the
+    real module wins the import and no rewrite is warranted.
+    """
+    if not src_root.exists():
+        return {}
+
+    real_modules = _real_module_names(src_root)
+    aliases: dict[str, str] = {}
+    for init_file in sorted(src_root.rglob("__init__.py")):
+        package = _path_to_module(init_file, src_root)
+        if not package:
+            continue
+        for short, target in _alias_tables_in_module(init_file).items():
+            legacy = f"{package}.{short}"
+            if legacy == target or legacy in real_modules or target not in real_modules:
+                continue
+            aliases[legacy] = target
+    return aliases
+
+
+def resolve_module_aliases(modules: set[str], aliases: dict[str, str]) -> set[str]:
+    """Return ``modules`` widened with the real module each alias resolves to.
+
+    The legacy name is kept alongside the resolved one so an existing edge
+    keyed on the old name still matches; the resolved name is what creates the
+    missing edge from the real source file to the test that imports it.
+    """
+    if not aliases:
+        return modules
+
+    resolved = set(modules)
+    for module in modules:
+        target = aliases.get(module)
+        hops = 0
+        while target is not None and hops < _ALIAS_CHAIN_LIMIT and target not in resolved:
+            resolved.add(target)
+            target = aliases.get(target)
+            hops += 1
+    return resolved
+
+
+def build_compat_dep_map(
+    root: Path,
+    src_root: Path,
+    test_dirs: list[Path],
+    package_prefixes: set[str] | None = None,
+) -> dict[str, Any]:
+    """Build the legacy dependency-map shape used by ``scripts/test_impact.py``."""
+    prefixes = package_prefixes or _iter_project_packages(src_root)
+    # A test that imports a module under a legacy alias records the alias, not
+    # the file that actually backs it. Resolving the alias here is what puts
+    # the edge from the real source file into the map at all.
+    aliases = discover_module_aliases(src_root)
+    test_deps: dict[str, dict[str, Any]] = {}
+    for test_dir in test_dirs:
+        if not test_dir.exists():
+            continue
+        for test_file in sorted(test_dir.rglob("test_*.py")):
+            rel = test_file.relative_to(root).as_posix()
+            test_deps[rel] = {
+                "hash": _file_hash(test_file),
+                "imports": sorted(resolve_module_aliases(extract_project_imports(test_file, prefixes), aliases)),
+                "paths": sorted(extract_path_literals(test_file)),
+            }
+
+    source_imports: dict[str, dict[str, Any]] = {}
+    if src_root.exists():
+        for src_file in sorted(src_root.rglob("*.py")):
+            module = _path_to_module(src_file, src_root)
+            if not module:
+                continue
+            source_imports[module] = {
+                "hash": _file_hash(src_file),
+                "imports": sorted(resolve_module_aliases(extract_project_imports(src_file, prefixes), aliases)),
+                "paths": sorted(extract_path_literals(src_file)),
+            }
+
+    return {
+        "version": _COMPAT_CACHE_VERSION,
+        "test_deps": test_deps,
+        "source_imports": source_imports,
+    }
+
+
+def _is_string_list(value: object) -> bool:
+    """Return whether a cached value is a list holding only strings."""
+    return isinstance(value, list) and all(isinstance(item, str) for item in cast("list[object]", value))
+
+
+def _check_hashes_fresh(
+    file_iter: list[tuple[str, Path]],
+    dep_map: dict[str, object],
+) -> bool:
+    """Return False if any entry in dep_map is stale or malformed for these files.
+
+    The shape check is not defensive tidiness. ``_normalize_string_list`` turns
+    anything it does not recognise into an empty list, so a hand-edited or
+    truncated cache whose ``paths`` is a bare string, or holds a null, passes a
+    hash-only freshness check and then contributes no edges -- the selector
+    reports a smaller affected set and nothing anywhere says why. Rejecting the
+    entry rebuilds the map instead, which is cheap and cannot silently
+    under-select.
+    """
+    for key, file_path in file_iter:
+        entry = dep_map.get(key)
+        if not isinstance(entry, dict):
+            return False
+        entry_dict = cast("_JsonObject", entry)
+        if entry_dict.get("hash") != _file_hash(file_path):
+            return False
+        if not _is_string_list(entry_dict.get("imports", [])) or not _is_string_list(entry_dict.get("paths", [])):
+            return False
+    return True
+
+
+def compat_cache_is_fresh(
+    cached: dict[str, Any],
+    *,
+    root: Path,
+    src_root: Path,
+    test_dirs: list[Path],
+) -> bool:
+    """Return whether a legacy dependency map still matches on-disk files."""
+    if cached.get("version") != _COMPAT_CACHE_VERSION:
+        return False
+    test_deps_raw = cached.get("test_deps")
+    source_imports_raw = cached.get("source_imports")
+    test_deps = cast("_JsonObject", test_deps_raw) if isinstance(test_deps_raw, dict) else {}
+    source_imports = cast("_JsonObject", source_imports_raw) if isinstance(source_imports_raw, dict) else {}
+
+    test_files: list[tuple[str, Path]] = []
+    for test_dir in test_dirs:
+        if test_dir.exists():
+            test_files.extend((tf.relative_to(root).as_posix(), tf) for tf in test_dir.rglob("test_*.py"))
+    if not _check_hashes_fresh(test_files, test_deps):
+        return False
+
+    if src_root.exists():
+        src_files = [(_path_to_module(sf, src_root), sf) for sf in src_root.rglob("*.py")]
+        if not _check_hashes_fresh(src_files, source_imports):
+            return False
+
+    return True
+
+
+def _build_module_to_tests_map(test_deps: dict[str, object]) -> dict[str, set[str]]:
+    """Build a reverse map from module name to test file relative paths."""
+    module_to_tests: dict[str, set[str]] = {}
+    for test_rel, entry in test_deps.items():
+        if not isinstance(entry, dict):
+            continue
+        entry_dict = cast("_JsonObject", entry)
+        for module in _normalize_string_list(entry_dict.get("imports", [])):
+            module_to_tests.setdefault(module, set()).add(test_rel)
+    return module_to_tests
+
+
+def _modules_naming_changed_paths(
+    changed_files: list[str],
+    source_imports: dict[str, object],
+) -> set[str]:
+    """Return indexed modules that name any changed path as a string literal.
+
+    A generated artefact is named by the module that generates it, never by the
+    guard that checks it: the agent-context mirrors (``CLAUDE.md``,
+    ``.goosehints``, ``.aider.conf.yml``) are spelled out in
+    ``knowledge/agents_md_bridge.py``, while the guard asks the bridge to render
+    them and compares bytes. Harvesting only the guard's own literals therefore
+    leaves the mirrors uncovered -- editing ``CLAUDE.md`` by hand selected no
+    test that would notice.
+
+    Attributing the change to the module that names the file puts it back on the
+    import graph, where the guard is reachable because it imports that module.
+    """
+    modules: set[str] = set()
+    for module, info in source_imports.items():
+        if not isinstance(info, dict):
+            continue
+        info_dict = cast("_JsonObject", info)
+        literals = set(_normalize_string_list(info_dict.get("paths", [])))
+        if not literals:
+            continue
+        if any(literals & _path_match_keys(rel_path) for rel_path in changed_files):
+            modules.add(module)
+    return modules
+
+
+def _build_path_to_tests_map(test_deps: dict[str, object]) -> dict[str, set[str]]:
+    """Build a reverse map from a harvested path literal to the tests naming it."""
+    path_to_tests: dict[str, set[str]] = {}
+    for test_rel, entry in test_deps.items():
+        if not isinstance(entry, dict):
+            continue
+        entry_dict = cast("_JsonObject", entry)
+        for literal in _normalize_string_list(entry_dict.get("paths", [])):
+            path_to_tests.setdefault(literal, set()).add(test_rel)
+    return path_to_tests
+
+
+def _path_match_keys(rel_path: str) -> set[str]:
+    """Return every suffix of ``rel_path`` a test could have written.
+
+    ``src/bernstein/core/security/AGENTS.md`` yields the whole path, then
+    ``core/security/AGENTS.md`` down to ``AGENTS.md``. A guard that globs for a
+    bare file name matches on the last key; one that pins a single file matches
+    only on the longer key it wrote, so pinning stays specific.
+    """
+    parts = Path(rel_path).as_posix().split("/")
+    return {"/".join(parts[index:]) for index in range(len(parts))}
+
+
+def _tests_reading_changed_paths(
+    changed_files: list[str],
+    path_to_tests: dict[str, set[str]],
+) -> set[str]:
+    """Return tests that name any changed path as a string literal."""
+    affected: set[str] = set()
+    for rel_path in changed_files:
+        for key in _path_match_keys(rel_path):
+            affected.update(path_to_tests.get(key, set()))
+    return affected
+
+
+def _expand_transitive_modules(
+    changed_modules: set[str],
+    source_imports: dict[str, object],
+) -> set[str]:
+    """Expand changed modules transitively via reverse import edges."""
+    all_affected = changed_modules.copy()
+    worklist = changed_modules.copy()
+    while worklist:
+        current = worklist.pop()
+        for module, info in source_imports.items():
+            if not isinstance(info, dict):
+                continue
+            info_dict = cast("_JsonObject", info)
+            imports = _normalize_string_list(info_dict.get("imports", []))
+            if current in imports and module not in all_affected:
+                all_affected.add(module)
+                worklist.add(module)
+    return all_affected
+
+
+def _collect_changed_test_files(
+    changed_files: list[str],
+    root: Path,
+    test_deps: dict[str, object],
+) -> set[str]:
+    """Collect directly changed test files that exist in test_deps."""
+    affected: set[str] = set()
+    for rel_path in changed_files:
+        file_path = root / rel_path
+        if file_path.suffix == ".py" and file_path.name.startswith("test_"):
+            rel = file_path.relative_to(root).as_posix()
+            if rel in test_deps:
+                affected.add(rel)
+    return affected
+
+
+def _has_workflow_change(changed_files: list[str]) -> bool:
+    """Return True when a changed path is a GitHub Actions workflow."""
+    return any(Path(path).as_posix().startswith(_WORKFLOW_PATH_PREFIX) for path in changed_files)
+
+
+def _reads_workflow_files(test_path: Path) -> bool:
+    """Return True when a test file reaches into ``.github/workflows``."""
+    try:
+        text = test_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+    if _WORKFLOW_DIR_LITERAL in text:
+        return True
+    return "workflows" in text and any(segment in text for segment in _WORKFLOW_DIR_SEGMENTS)
+
+
+def _workflow_test_files(test_files: list[str], root: Path) -> set[str]:
+    """Return tests that validate workflow YAML or workflow tooling.
+
+    Two rules, unioned, because neither one alone is honest.
+
+    Selecting on the substring ``workflow`` in the file name only finds guards
+    that follow that convention. A guard named after the workflow it pins reads
+    the same YAML and breaks on the same edit, so the name rule drops it and the
+    breakage surfaces only after the merge, when the full suite runs.
+
+    Reading the file instead of its name fixes that but cannot stand on its own:
+    a guard that reaches workflows through a script it shells out to spells no
+    workflow path of its own, and the checked-in CI topology report is guarded
+    exactly that way. Keeping the name rule keeps that guard selected.
+    """
+    return {
+        test_file
+        for test_file in test_files
+        if "workflow" in Path(test_file).name or _reads_workflow_files(root / test_file)
+    }
+
+
+def _collect_tests_for_modules(
+    all_affected: set[str],
+    module_to_tests: dict[str, set[str]],
+) -> set[str]:
+    """Collect tests for affected modules, including parent module prefixes."""
+    affected: set[str] = set()
+    for module in all_affected:
+        affected.update(module_to_tests.get(module, set()))
+        parts = module.split(".")
+        for index in range(1, len(parts)):
+            affected.update(module_to_tests.get(".".join(parts[:index]), set()))
+    return affected
+
+
+def _asset_owner_packages(changed_files: list[str], root: Path, src_root: Path) -> set[str]:
+    """Map non-Python files under ``src_root`` to their nearest enclosing package.
+
+    Package data (a built GUI bundle, templates, schema files) carries no
+    import edge, so a change confined to it would otherwise produce an empty
+    affected set and trip the fail-closed rule in ``scripts/run_tests.py``
+    even though the tests that exercise the owning package genuinely cover
+    the data it ships. Attributing the file to its nearest package with an
+    ``__init__.py`` lets the selector treat the change as a change to that
+    package.
+    """
+    packages: set[str] = set()
+    for rel_path in changed_files:
+        file_path = root / Path(rel_path)
+        if file_path.suffix == ".py" or not file_path.is_relative_to(src_root):
+            continue
+        for parent in file_path.parents:
+            if parent == src_root or not parent.is_relative_to(src_root):
+                break
+            if (parent / "__init__.py").exists():
+                packages.add(".".join(parent.relative_to(src_root).parts))
+                break
+    return packages
+
+
+def _modules_within_packages(packages: set[str], source_imports: dict[str, object]) -> set[str]:
+    """Return indexed modules that live inside any of ``packages``."""
+    modules: set[str] = set()
+    for package in packages:
+        prefix = package + "."
+        modules.update(module for module in source_imports if module == package or module.startswith(prefix))
+    return modules
+
+
+def compat_get_affected_tests(
+    changed_files: list[str],
+    dep_map: dict[str, Any],
+    *,
+    root: Path,
+    src_root: Path,
+) -> list[Path]:
+    """Return affected test file paths for the legacy script contract."""
+    test_deps_raw = dep_map.get("test_deps")
+    source_imports_raw = dep_map.get("source_imports")
+    test_deps = cast("_JsonObject", test_deps_raw) if isinstance(test_deps_raw, dict) else {}
+    source_imports = cast("_JsonObject", source_imports_raw) if isinstance(source_imports_raw, dict) else {}
+
+    if any("conftest.py" in changed for changed in changed_files):
+        return sorted(root / rel for rel in test_deps)
+
+    module_to_tests = _build_module_to_tests_map(test_deps)
+
+    changed_modules: set[str] = set()
+    for rel_path in changed_files:
+        file_path = root / rel_path
+        if file_path.suffix == ".py" and file_path.is_relative_to(src_root):
+            changed_modules.add(_path_to_module(file_path, src_root))
+
+    # Non-Python package data (e.g. the shipped GUI bundle) is attributed to
+    # its owning package: every indexed module inside that package counts as
+    # changed, so the tests that import the package run against the new data.
+    changed_modules.update(
+        _modules_within_packages(
+            _asset_owner_packages(changed_files, root, src_root),
+            source_imports,
+        )
+    )
+
+    all_affected = _expand_transitive_modules(changed_modules, source_imports)
+    affected_tests = _collect_changed_test_files(changed_files, root, test_deps)
+    if _has_workflow_change(changed_files):
+        affected_tests.update(_workflow_test_files(list(test_deps), root))
+    # Structural guards read their subject instead of importing it, so the
+    # import graph has no edge to offer for them. Selecting on the paths a test
+    # names is what puts a markdown, INI or registry-parsing guard in front of
+    # the diff that breaks it, rather than on main after the merge.
+    affected_tests.update(_tests_reading_changed_paths(changed_files, _build_path_to_tests_map(test_deps)))
+    # A generated file is named by the module that generates it, not by the
+    # guard that checks it. The tests bound directly to that module are the ones
+    # that can notice; its transitive importers cannot, so this edge stops at
+    # the direct mapping rather than joining the expansion above.
+    affected_tests.update(
+        _collect_tests_for_modules(
+            _modules_naming_changed_paths(changed_files, source_imports),
+            module_to_tests,
+        )
+    )
+    affected_tests.update(_collect_tests_for_modules(all_affected, module_to_tests))
+
+    return sorted(root / rel for rel in affected_tests)
+
+
+@dataclass(frozen=True)
+class TestMapping:
+    """Maps a changed source file to affected test files."""
+
+    source_file: str
+    test_files: list[str]
+    reason: str
+
+
+@dataclass(frozen=True)
+class ImpactAnalysis:
+    """Result of analyzing impacted tests for a changed-file set."""
+
+    changed_files: list[str]
+    affected_tests: list[str]
+    mappings: list[TestMapping]
+    coverage_pct: float
+    fallback_used: bool
+
+
+class TestImpactAnalyzer:
+    """Determine which tests are affected by a set of changed files."""
+
+    def __init__(
+        self,
+        project_root: Path,
+        *,
+        cache_path: Path | None = None,
+        src_root: Path | None = None,
+        test_dirs: list[Path] | None = None,
+    ) -> None:
+        self._root = project_root
+        self._src_root = src_root or (project_root / "src")
+        self._test_dirs = test_dirs or [project_root / "tests"]
+        self._cache_path = cache_path or (project_root / ".sdd" / "cache" / "test_impact_index.json")
+        self._package_prefixes = _iter_project_packages(self._src_root)
+        # Built lazily: only a fresh index needs it, and a warm cache must not
+        # pay for an AST scan of every package __init__.
+        self._aliases: dict[str, str] | None = None
+        self._graph: dict[str, set[str]] = {}
+        self._reverse: dict[str, set[str]] = {}
+        self._source_imports: dict[str, set[str]] = {}
+        self._all_tests: set[str] = set()
+        self._built = False
+
+    def _restore_from_cache(self, cached: AnalyzerCacheData) -> None:
+        """Restore index state from a cached dict."""
+        self._graph = {key: set(value) for key, value in cached["graph"].items()}
+        self._reverse = {key: set(value) for key, value in cached["reverse"].items()}
+        self._source_imports = {key: set(value) for key, value in cached["source_imports"].items()}
+        self._all_tests = set(cached["all_tests"])
+        self._built = True
+
+    def _build_fresh_index(self) -> tuple[dict[str, set[str]], dict[str, set[str]], dict[str, set[str]], set[str]]:
+        """Scan tests and sources to build the index from scratch."""
+        graph: dict[str, set[str]] = {}
+        reverse: dict[str, set[str]] = {}
+        source_imports: dict[str, set[str]] = {}
+        all_tests: set[str] = set()
+        self._aliases = discover_module_aliases(self._src_root)
+
+        for test_file in self._discover_tests():
+            rel = test_file.relative_to(self._root).as_posix()
+            all_tests.add(rel)
+            for module in self._parse_test_imports(test_file):
+                graph.setdefault(module, set()).add(rel)
+                reverse.setdefault(rel, set()).add(module)
+
+        if self._src_root.exists():
+            for source_file in sorted(self._src_root.rglob("*.py")):
+                module = _path_to_module(source_file, self._src_root)
+                if not module:
+                    continue
+                source_imports[module] = self._parse_source_imports(source_file)
+                for mapped_test in self._name_based_mapping(source_file.relative_to(self._root).as_posix()):
+                    graph.setdefault(module, set()).add(mapped_test)
+                    reverse.setdefault(mapped_test, set()).add(module)
+                    all_tests.add(mapped_test)
+
+        return graph, reverse, source_imports, all_tests
+
+    def build_index(self, *, force: bool = False) -> None:
+        """Build or load the source-to-test mapping index."""
+        if self._built and not force:
+            return
+        if not force:
+            cached = self._load_cache()
+            if cached is not None:
+                self._restore_from_cache(cached)
+                return
+
+        self._graph, self._reverse, self._source_imports, self._all_tests = self._build_fresh_index()
+        self._persist_cache()
+        self._built = True
+
+    def _analyze_source(self, rel_path: str) -> tuple[set[str], str] | None:
+        """Determine tests affected by a single changed source file."""
+        file_path = self._root / rel_path
+        module = _path_to_module(file_path, self._src_root)
+        if not module:
+            return None
+
+        module_tests: set[str] = set()
+        reason = "direct_import"
+        if file_path.name == "__init__.py":
+            reason = "all"
+            module_tests.update(self._tests_for_package(module))
+        else:
+            impacted_modules = self._expand_impacted_modules({module})
+            for impacted_module in impacted_modules:
+                tests = self._graph.get(impacted_module, set())
+                if tests:
+                    if impacted_module != module:
+                        reason = "transitive"
+                    module_tests.update(tests)
+
+        return (module_tests, reason) if module_tests else None
+
+    def _compute_coverage_pct(
+        self,
+        changed_sources: list[str],
+        covered_sources: int,
+        affected: set[str],
+    ) -> float:
+        """Compute the coverage percentage for the analysis."""
+        if changed_sources:
+            return round((covered_sources / len(changed_sources)) * 100.0, 2)
+        if affected:
+            return 100.0
+        return 0.0
+
+    def analyze(self, changed_files: list[str]) -> ImpactAnalysis:
+        """Analyze a changed-file set and return impacted tests."""
+        self.build_index()
+        normalized = sorted({Path(path).as_posix() for path in changed_files})
+        if not normalized:
+            return ImpactAnalysis(
+                changed_files=[],
+                affected_tests=[],
+                mappings=[],
+                coverage_pct=0.0,
+                fallback_used=False,
+            )
+
+        all_tests = sorted(self._all_tests)
+        if any(path.endswith("conftest.py") and path.startswith("tests/") for path in normalized):
+            return ImpactAnalysis(
+                changed_files=normalized,
+                affected_tests=all_tests,
+                mappings=[TestMapping(source_file="tests/conftest.py", test_files=all_tests, reason="all")],
+                coverage_pct=100.0,
+                fallback_used=True,
+            )
+
+        affected: set[str] = set()
+        mappings: list[TestMapping] = []
+        workflow_tests = sorted(_workflow_test_files(all_tests, self._root)) if _has_workflow_change(normalized) else []
+        if workflow_tests:
+            affected.update(workflow_tests)
+            mappings.append(
+                TestMapping(
+                    source_file=_WORKFLOW_PATH_PREFIX.rstrip("/"),
+                    test_files=workflow_tests,
+                    reason="workflow",
+                )
+            )
+        changed_sources = [
+            path for path in normalized if path.endswith(".py") and (self._root / path).is_relative_to(self._src_root)
+        ]
+        covered_sources = 0
+
+        for rel_path in normalized:
+            file_path = self._root / rel_path
+            if file_path.name.startswith("test_") and file_path.suffix == ".py" and rel_path.startswith("tests/"):
+                affected.add(rel_path)
+                mappings.append(TestMapping(source_file=rel_path, test_files=[rel_path], reason="direct_import"))
+
+        for rel_path in changed_sources:
+            result = self._analyze_source(rel_path)
+            if result is None:
+                continue
+            module_tests, reason = result
+            covered_sources += 1
+            test_list = sorted(module_tests)
+            affected.update(test_list)
+            mappings.append(TestMapping(source_file=rel_path, test_files=test_list, reason=reason))
+
+        # Fail open: a changed path matched by no selection rule (a version bump,
+        # a docs edit, a new top-level config) must run the full suite rather
+        # than silently select zero tests and merge green.
+        uncovered = [path for path in normalized if not self._is_selection_covered(path)]
+        if uncovered:
+            return self._fallback_all_tests(normalized, all_tests, reason="uncovered_path", source=uncovered[0])
+
+        # A src change that maps to no test also fails open. Broader than "nothing
+        # mapped": if any changed source is unmapped, run everything, so a
+        # partially-unmapped change set cannot skip the tests guarding it.
+        if covered_sources < len(changed_sources):
+            return self._fallback_all_tests(normalized, all_tests, reason="unmapped_source", source="src")
+
+        return ImpactAnalysis(
+            changed_files=normalized,
+            affected_tests=sorted(affected),
+            mappings=mappings,
+            coverage_pct=self._compute_coverage_pct(changed_sources, covered_sources, affected),
+            fallback_used=False,
+        )
+
+    def _is_selection_covered(self, rel_path: str) -> bool:
+        """Return True when a changed path is matched by a known selection rule.
+
+        The recognised rules are: a source file under ``src`` (``src/**/*.py``),
+        a ``tests/**/test_*.py`` file, a ``tests/**/conftest.py`` file, a GitHub
+        Actions workflow, and the small inert allowlist. Anything else is
+        considered uncovered and forces a fail-open fallback to the full suite.
+        """
+        path = Path(rel_path).as_posix()
+        if path in _FALLBACK_ALLOWLIST:
+            return True
+        if path.startswith(_WORKFLOW_PATH_PREFIX):
+            return True
+        if path.endswith(".py") and (self._root / rel_path).is_relative_to(self._src_root):
+            return True
+        if path.startswith("tests/"):
+            name = Path(path).name
+            if name == "conftest.py" or (name.startswith("test_") and name.endswith(".py")):
+                return True
+        return False
+
+    def _fallback_all_tests(
+        self,
+        normalized: list[str],
+        all_tests: list[str],
+        *,
+        reason: str,
+        source: str,
+    ) -> ImpactAnalysis:
+        """Return a fail-open analysis that selects the entire test suite."""
+        return ImpactAnalysis(
+            changed_files=normalized,
+            affected_tests=all_tests,
+            mappings=[TestMapping(source_file=source, test_files=all_tests, reason=reason)],
+            coverage_pct=100.0,
+            fallback_used=True,
+        )
+
+    def _discover_tests(self) -> list[Path]:
+        """Find test files in configured test directories."""
+        tests: list[Path] = []
+        for test_dir in self._test_dirs:
+            if not test_dir.exists():
+                continue
+            tests.extend(sorted(path for path in test_dir.rglob("test_*.py") if path.is_file()))
+        return tests
+
+    def _resolved_imports(self, path: Path) -> set[str]:
+        """Parse project imports from ``path`` with legacy aliases resolved."""
+        if self._aliases is None:
+            self._aliases = discover_module_aliases(self._src_root)
+        return resolve_module_aliases(extract_project_imports(path, self._package_prefixes), self._aliases)
+
+    def _parse_test_imports(self, test_file: Path) -> set[str]:
+        """Parse source dependencies imported by a test file."""
+        return self._resolved_imports(test_file)
+
+    def _parse_source_imports(self, source_file: Path) -> set[str]:
+        """Parse project imports used by a source file."""
+        return self._resolved_imports(source_file)
+
+    def _name_based_mapping(self, source_rel: str) -> list[str]:
+        """Map a source file to likely test files by naming convention."""
+        source_path = Path(source_rel)
+        if source_path.name == "__init__.py":
+            return []
+        stem = source_path.stem
+        matches: set[str] = set()
+        for test_file in self._discover_tests():
+            if test_file.name == f"test_{stem}.py":
+                matches.add(test_file.relative_to(self._root).as_posix())
+        return sorted(matches)
+
+    def _snapshot(self) -> dict[str, int]:
+        """Return an mtime snapshot used for cache invalidation."""
+        snapshot: dict[str, int] = {}
+        paths: list[Path] = []
+        if self._src_root.exists():
+            paths.extend(sorted(self._src_root.rglob("*.py")))
+        for test_dir in self._test_dirs:
+            if test_dir.exists():
+                paths.extend(sorted(test_dir.rglob("*.py")))
+        for path in paths:
+            try:
+                snapshot[path.relative_to(self._root).as_posix()] = path.stat().st_mtime_ns
+            except OSError:
+                continue
+        return snapshot
+
+    def _load_cache(self) -> AnalyzerCacheData | None:
+        """Load a previously persisted analyzer cache when still fresh."""
+        if not self._cache_path.exists():
+            return None
+        try:
+            raw: object = json.loads(self._cache_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(raw, dict):
+            return None
+        data = cast("_JsonObject", raw)
+        if data.get("version") != _ANALYZER_CACHE_VERSION:
+            return None
+        snapshot = data.get("snapshot")
+        if not isinstance(snapshot, dict) or snapshot != self._snapshot():
+            return None
+        graph = _normalize_mapping_list(data.get("graph", {}))
+        reverse = _normalize_mapping_list(data.get("reverse", {}))
+        source_imports = _normalize_mapping_list(data.get("source_imports", {}))
+        all_tests = _normalize_string_list(data.get("all_tests", []))
+        return {
+            "graph": graph,
+            "reverse": reverse,
+            "source_imports": source_imports,
+            "all_tests": all_tests,
+        }
+
+    def _persist_cache(self) -> None:
+        """Persist the analyzer cache."""
+        payload = {
+            "version": _ANALYZER_CACHE_VERSION,
+            "snapshot": self._snapshot(),
+            "graph": {key: sorted(value) for key, value in self._graph.items()},
+            "reverse": {key: sorted(value) for key, value in self._reverse.items()},
+            "source_imports": {key: sorted(value) for key, value in self._source_imports.items()},
+            "all_tests": sorted(self._all_tests),
+        }
+        self._cache_path.parent.mkdir(parents=True, exist_ok=True)
+        self._cache_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    def _expand_impacted_modules(self, start_modules: set[str]) -> set[str]:
+        """Expand changed modules to transitive reverse dependencies."""
+        affected = start_modules.copy()
+        worklist = start_modules.copy()
+        while worklist:
+            current = worklist.pop()
+            for module, imports in self._source_imports.items():
+                if current in imports and module not in affected:
+                    affected.add(module)
+                    worklist.add(module)
+        return affected
+
+    def _module_to_source_path(self, module: str) -> str | None:
+        """Convert a dotted module name back to its relative source file path.
+
+        Args:
+            module: Dotted module name, e.g. ``"bernstein.core.foo"``.
+
+        Returns:
+            Relative posix path if the file exists on disk, else ``None``.
+        """
+        parts = module.split(".")
+        if not parts:
+            return None
+        # Try regular module file first: bernstein.core.foo -> src/bernstein/core/foo.py
+        module_file = self._src_root.joinpath(*parts[:-1], f"{parts[-1]}.py")
+        # Try package init: bernstein.core -> src/bernstein/core/__init__.py
+        init_file = self._src_root.joinpath(*parts, "__init__.py")
+        for candidate in (module_file, init_file):
+            if candidate.exists():
+                with suppress(ValueError):
+                    return candidate.relative_to(self._root).as_posix()
+        return None
+
+    def get_dependent_source_files(self, changed_files: list[str]) -> list[str]:
+        """Return source files that transitively depend on the changed files.
+
+        Given a list of changed source file paths, returns the file paths of
+        all source files that import (directly or transitively) any of those
+        files, plus the original changed files themselves.  Use this to expand
+        the type-check scope so that callers of modified modules are validated.
+
+        Args:
+            changed_files: Relative posix paths of changed source files.
+
+        Returns:
+            Sorted, deduplicated list of relative paths including changed
+            files and all transitive importers found in the source index.
+            Falls back to returning just the original changed files when no
+            dependency information is available.
+        """
+        self.build_index()
+        if not self._source_imports:
+            return sorted(changed_files)
+
+        changed_modules: set[str] = set()
+        for rel_path in changed_files:
+            if not rel_path.endswith(".py"):
+                continue
+            file_path = self._root / rel_path
+            try:
+                if not file_path.is_relative_to(self._src_root):
+                    continue
+            except ValueError:
+                continue
+            module = _path_to_module(file_path, self._src_root)
+            if module:
+                changed_modules.add(module)
+
+        if not changed_modules:
+            return sorted(changed_files)
+
+        all_affected = self._expand_impacted_modules(changed_modules)
+
+        result: set[str] = set(changed_files)
+        for module in all_affected:
+            path = self._module_to_source_path(module)
+            if path is not None:
+                result.add(path)
+
+        return sorted(result)
+
+    def _tests_for_package(self, package_prefix: str) -> set[str]:
+        """Return tests mapped to any module inside a package prefix."""
+        tests: set[str] = set()
+        for module, module_tests in self._graph.items():
+            if module == package_prefix or module.startswith(f"{package_prefix}."):
+                tests.update(module_tests)
+        return tests

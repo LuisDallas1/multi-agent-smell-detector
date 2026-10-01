@@ -1,0 +1,1641 @@
+"""Bootstrap orchestration: coordinate startup, task planning, and agent spawning.
+
+This module orchestrates the full bootstrap flow: parsing seed, starting server,
+and spawning agents. It imports lower-level startup logic from server_launch.py
+and preflight checks from preflight.py.
+
+Entry points:
+- bootstrap_from_seed() - read bernstein.yaml and launch
+- bootstrap_from_goal() - quick launch from inline goal string
+"""
+
+from __future__ import annotations
+
+import asyncio as _asyncio
+import concurrent.futures
+import contextlib
+import logging
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+import httpx
+from rich.console import Console
+from rich.status import Status
+
+from bernstein.core.observability.icons import get_icons
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable as _Awaitable
+
+    from bernstein.core.models import Task
+
+# Import from sub-modules (facade re-exports)
+from bernstein.core.config_path_validation import check_config_paths
+from bernstein.core.log_redact import install_pii_filter
+from bernstein.core.orchestration.preflight import (
+    _claude_has_oauth_session,
+    _codex_has_auth,
+    gemini_has_auth,
+    preflight_checks,
+)
+from bernstein.core.orchestration.process_utils import (
+    LIVENESS_ALIVE,
+    LIVENESS_GONE,
+    ORCHESTRATOR_PROCESS_MARKERS,
+    WATCHDOG_POLL_S,
+    Liveness,
+    classify_pidfile_liveness,
+)
+from bernstein.core.seed import (
+    NotifyConfig,
+    SeedConfig,
+    github_backlog_sync_enabled,
+    parse_seed,
+)
+from bernstein.core.server_launch import (
+    _SERVER_READY_TIMEOUT_S,
+    BootstrapResult,
+    _build_codebase_index,
+    _clean_stale_runtime,
+    _discover_catalog,
+    _inject_manager_task,
+    _inject_worker_task,
+    _is_alive,
+    _read_pid,
+    _resolve_auth_token,
+    _resolve_bind_host,
+    _resolve_server_url,
+    _start_server,
+    _start_spawner,
+    _wait_for_server,
+    auto_write_bernstein_yaml,
+    create_router,
+    ensure_sdd,
+)
+from bernstein.core.server_supervisor import supervised_server
+
+logger = logging.getLogger(__name__)
+
+
+def _reconcile_dead_owner_before_runtime_cleanup(workdir: Path) -> None:
+    """Preserve an abnormal closure before stale runtime files are removed."""
+    from bernstein.core.orchestration.run_closure_owner import (
+        list_spawner_run_owners,
+        reconcile_spawner_run_owner,
+    )
+
+    for owner in list_spawner_run_owners(workdir / ".sdd"):
+        if not _is_alive(owner.pid):
+            reconcile_spawner_run_owner(workdir=workdir, owner=owner)
+
+
+def _bearer_headers(auth_token: str | None) -> dict[str, str]:
+    """Authorization header for the CLI's own calls to its auth-enabled server.
+
+    ``bernstein run`` / ``conduct`` spawn the task server themselves and, when
+    dashboard auth is configured, hand it a bearer token (see
+    :func:`~bernstein.core.server.server_launch._resolve_auth_token`). The same
+    process must present that token on its own client calls - posting plan
+    tasks, importing workflow items - or the server 401s the CLI against its
+    own task server. Returns an empty dict when no token is configured so the
+    unauthenticated (loopback, no-auth) path is unchanged.
+    """
+    return {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
+
+
+# ---------------------------------------------------------------------------
+# Singleton PID lock
+# ---------------------------------------------------------------------------
+
+
+def _acquire_pid_lock(workdir: Path) -> None:
+    """Ensure only one Bernstein instance runs per working directory.
+
+    Writes the current PID to ``.sdd/runtime/bernstein.pid``.  If the file
+    already exists and the recorded PID is still alive, raises
+    ``RuntimeError`` to prevent data corruption from concurrent instances.
+
+    The PID file is removed on clean shutdown via :func:`_release_pid_lock`.
+
+    Args:
+        workdir: Project root directory.
+
+    Raises:
+        RuntimeError: If another live instance owns the PID file.
+    """
+    runtime_dir = workdir / ".sdd" / "runtime"
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    pid_path = runtime_dir / "bernstein.pid"
+
+    if pid_path.exists():
+        try:
+            existing_pid = int(pid_path.read_text().strip())
+        except (ValueError, OSError):
+            existing_pid = -1
+
+        if existing_pid > 0:
+            from bernstein.core.platform_compat import process_alive
+
+            if process_alive(existing_pid):
+                raise RuntimeError(
+                    f"Another Bernstein instance is running (PID {existing_pid}). "
+                    f"Stop it first with 'bernstein stop' or remove {pid_path}"
+                )
+
+    pid_path.write_text(str(os.getpid()))
+
+    import atexit
+
+    atexit.register(_release_pid_lock, workdir)
+
+
+def _release_pid_lock(workdir: Path) -> None:
+    """Remove the PID lock file on clean shutdown.
+
+    Only removes the file if it still contains our PID (guards against a
+    race where a new instance has already replaced the file).
+
+    Args:
+        workdir: Project root directory.
+    """
+    pid_path = workdir / ".sdd" / "runtime" / "bernstein.pid"
+    with contextlib.suppress(ValueError, OSError):
+        if pid_path.exists() and int(pid_path.read_text().strip()) == os.getpid():
+            pid_path.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# MCP auto-discovery helpers
+# ---------------------------------------------------------------------------
+
+
+def _register_mcp_discovery(workdir: Path) -> None:
+    """Write Bernstein into .claude/mcp.json so Claude Code auto-discovers it.
+
+    Any Claude Code session opened in ``workdir`` will automatically have
+    access to the Bernstein orchestration tools (bernstein_status, etc.)
+    without manual configuration.
+
+    The file is written into the work tree because Claude Code reads it from
+    there and nowhere else, and is registered in the repository's local git
+    excludes so it still cannot be staged. See
+    :mod:`bernstein.core.git.local_exclude` for why this path is the sole
+    exemption from "run configuration lives outside the work tree".
+
+    Args:
+        workdir: Project root directory.
+    """
+    import json as _json
+
+    from bernstein.core.git.local_exclude import register_run_excludes
+
+    mcp_path = workdir / ".claude" / "mcp.json"
+    mcp_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # This is the one run-owned file that has to live inside the work tree:
+    # Claude Code resolves it at a fixed project-local path and takes no
+    # argument pointing elsewhere. Registering it in the repository's
+    # ``info/exclude`` keeps a broad ``git add -A`` from staging it, so the
+    # "run configuration is never part of a change" invariant holds for it
+    # too. Done before the early return below so the exclusion is in place
+    # even on the run where the file needed no rewrite (issue #4485).
+    register_run_excludes(workdir)
+
+    existing: dict[str, object] = {}
+    if mcp_path.exists():
+        try:
+            loaded = _json.loads(mcp_path.read_text())
+        except (ValueError, OSError):
+            loaded = None
+        # A valid JSON document need not be an object: null, a list, a string,
+        # and scalars all decode cleanly and would then fail on .get() below,
+        # outside the suppress(OSError) both call sites wrap this in.
+        if isinstance(loaded, dict):
+            existing = loaded
+
+    raw_servers = existing.get("mcpServers")
+    # dict() also accepts a list of pairs, which would smuggle entries in from
+    # a shape that is not a server map. Require a real object.
+    servers: dict[str, object] = dict(raw_servers) if isinstance(raw_servers, dict) else {}
+    desired_args = ["-m", "bernstein.mcp.server"]
+
+    # Self-heal only when the entry is missing or stale. The bernstein entry is
+    # identified by its ``args``; ``command`` is ``sys.executable``, which is
+    # machine-specific and differs between the host that committed a tracked
+    # mcp.json and the host running the wheel. Rewriting on that difference
+    # dirties the operator working tree on every run (issue #2800), so when an
+    # entry with the same args already exists we leave the file untouched and
+    # only its (machine-specific) command may differ.
+    current = servers.get("bernstein")
+    if isinstance(current, dict) and current.get("args") == desired_args:
+        logger.debug("Bernstein MCP server already registered in %s; skipping rewrite", mcp_path)
+        return
+
+    servers["bernstein"] = {
+        "command": sys.executable,
+        "args": desired_args,
+    }
+    existing["mcpServers"] = servers
+    mcp_path.write_text(_json.dumps(existing, indent=2) + "\n")
+    logger.debug("Registered Bernstein MCP server in %s", mcp_path)
+
+
+# Install PII redaction on the root logger so all handlers receive sanitised
+# messages - no email, phone, SSN, or credit-card number reaches disk/stdout.
+install_pii_filter()
+console = Console()
+
+# Constants - re-export for backward compat
+SDD_DIRS = (
+    ".sdd",
+    ".sdd/backlog",
+    ".sdd/backlog/open",
+    ".sdd/backlog/done",
+    ".sdd/agents",
+    ".sdd/runtime",
+    ".sdd/docs",
+    ".sdd/decisions",
+)
+
+__all__ = [
+    # This module
+    "SDD_DIRS",
+    # From server_launch (re-exported for backward compat)
+    "BootstrapResult",
+    # From preflight
+    "_claude_has_oauth_session",
+    "_codex_has_auth",
+    "auto_write_bernstein_yaml",
+    "bootstrap_from_goal",
+    "bootstrap_from_seed",
+    "console",
+    "create_router",
+    "ensure_sdd",
+    "gemini_has_auth",
+    "preflight_checks",
+    "run_watchdog",
+]
+
+
+def _send_webhook(config: NotifyConfig, payload: dict[str, Any]) -> None:
+    """POST a JSON payload to the configured webhook URL.
+
+    Errors are logged but never propagate - this must never crash the run.
+
+    Args:
+        config: Notification configuration containing the webhook URL.
+        payload: JSON-serialisable dict to POST.
+    """
+    if not config.webhook_url:
+        return
+    try:
+        resp = httpx.post(config.webhook_url, json=payload, timeout=10.0)
+        logger.info("Webhook POST %s -> %d", config.webhook_url, resp.status_code)
+    except httpx.RequestError as exc:
+        logger.error(
+            "Webhook POST to %s failed (%s: %s) - continuing without notification",
+            config.webhook_url,
+            type(exc).__name__,
+            exc,
+        )
+
+
+def _run_git_hygiene(workdir: Path) -> None:
+    """Run pre-startup git hygiene, logging warnings on failure."""
+    try:
+        from bernstein.core.git_hygiene import run_hygiene
+
+        run_hygiene(workdir, full=True)
+    except ImportError as exc:
+        logger.warning("Git hygiene module unavailable - skipping: %s", exc)
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning(
+            "Pre-startup git hygiene failed (%s: %s) - continuing",
+            type(exc).__name__,
+            exc,
+        )
+
+
+def _index_codebase_with_timeout(workdir: Path, timeout: float = 10) -> None:
+    """Build codebase index with a hard timeout to avoid blocking startup."""
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(_build_codebase_index, workdir)
+    with contextlib.suppress(concurrent.futures.TimeoutError):
+        future.result(timeout=timeout)
+    pool.shutdown(wait=False)
+
+
+def _check_safety_invariants(workdir: Path) -> None:
+    """Verify locked-file invariants, logging warnings on failure."""
+    try:
+        from bernstein.evolution.invariants import verify_invariants, write_lockfile
+
+        ok, violations = verify_invariants(workdir)
+        if not ok:
+            console.print(f"[bold red]⚠ {len(violations)} locked file(s) modified[/bold red]")
+        write_lockfile(workdir)
+    except ImportError as exc:
+        logger.warning("Invariants module unavailable - skipping check: %s", exc)
+    except OSError as exc:
+        logger.warning(
+            "Invariant check failed (%s: %s) - continuing",
+            type(exc).__name__,
+            exc,
+        )
+
+
+def _apply_storage_env(seed: Any) -> None:
+    """Set storage-related environment variables from seed config."""
+    if seed.storage is None:
+        return
+    os.environ.setdefault("BERNSTEIN_STORAGE_BACKEND", seed.storage.backend)
+    if seed.storage.database_url:
+        os.environ.setdefault("BERNSTEIN_DATABASE_URL", seed.storage.database_url)
+    if seed.storage.redis_url:
+        os.environ.setdefault("BERNSTEIN_REDIS_URL", seed.storage.redis_url)
+
+
+def _apply_compliance_env() -> None:
+    """Apply compliance preset from BERNSTEIN_COMPLIANCE env var."""
+    compliance_env = os.environ.get("BERNSTEIN_COMPLIANCE")
+    if not compliance_env:
+        return
+    from bernstein.core.compliance import ComplianceConfig, CompliancePreset
+
+    ComplianceConfig.from_preset(CompliancePreset(compliance_env.lower()))
+
+
+def _register_ci_parsers() -> None:
+    """Populate the CI log parser registry with all built-in adapters.
+
+    Without this call the registry is empty at runtime, so
+    ``bernstein ci fix --parser gitlab_ci`` and the self-healing CI
+    pipeline silently no-op (see prior audit). The helper in
+    :mod:`bernstein.adapters.ci` is idempotent, so calling it here on
+    top of the import-time side-effect is safe.
+    """
+    try:
+        from bernstein.adapters.ci import register_built_in_ci_parsers
+
+        register_built_in_ci_parsers()
+    except ImportError as exc:
+        logger.warning("CI adapters unavailable - skipping parser registration: %s", exc)
+
+
+def _load_secrets_provider(seed: Any) -> None:
+    """Load secrets provider if configured in seed."""
+    if not seed.secrets:
+        return
+    from bernstein.core.secrets import SecretsRefresher, load_secrets
+
+    try:
+        load_secrets(seed.secrets)
+        refresher = SecretsRefresher(seed.secrets)
+        refresher.start()
+        import atexit
+
+        atexit.register(refresher.stop)
+        console.print(f"  [dim]secrets[/dim] load from {seed.secrets.provider} [green]ok[/green]")
+    except Exception as sec_exc:
+        console.print(f"  [red]✗[/red] [dim]secrets[/dim] load failed: {sec_exc}")
+        raise SystemExit(1) from sec_exc
+
+
+def _maybe_sync_github_backlog(seed: Any, workdir: Path) -> int:
+    """Pull open GitHub issues into the backlog only when explicitly enabled.
+
+    Auto-sync is opt-in (``github.sync_backlog`` in bernstein.yaml, or the
+    ``BERNSTEIN_SYNC_GITHUB_BACKLOG`` env override). When it is off (the
+    default) no issues are synced and ``0`` is returned. This keeps a seeded
+    goal from being silently displaced by every open issue in the repo.
+
+    Returns:
+        Number of issues synced (``0`` when disabled or on any failure).
+    """
+    if not github_backlog_sync_enabled(seed):
+        logger.debug("GitHub backlog auto-sync disabled (github.sync_backlog off); skipping")
+        return 0
+    try:
+        from bernstein.core.github import sync_github_issues_to_backlog
+
+        return sync_github_issues_to_backlog(workdir)
+    except Exception as exc:
+        logger.debug("GitHub issue sync skipped: %s", exc)
+        return 0
+
+
+def _warn_if_goal_shadowed_by_backlog(
+    seed: Any,
+    *,
+    backlog_count: int,
+    prior_session: Any,
+    gh_synced: int,
+) -> None:
+    """Emit a LOUD warning when a seeded goal is dropped for a non-empty backlog.
+
+    Precedence at bootstrap is: resume prior session, else run the backlog,
+    else inject the seed goal. So a seeded goal never runs while the backlog is
+    non-empty. That is intentional for people who rely on backlog runs, but it
+    used to happen silently. Here we name the precedence and how to force the
+    goal so the operator is never surprised.
+    """
+    goal = str(getattr(seed, "goal", "") or "").strip()
+    if not goal or backlog_count <= 0 or prior_session is not None:
+        return
+    console.print(
+        "[bold yellow]WARNING[/bold yellow] seeded goal is being ignored: "
+        f"the backlog is non-empty ({backlog_count} task(s)), and the backlog "
+        "takes precedence over the goal at bootstrap."
+    )
+    console.print(
+        "[yellow]  precedence:[/yellow] prior session > backlog > seed goal. "
+        "To run the goal instead, start from an empty backlog (clear "
+        ".sdd/backlog/open/) or narrow the run with the BERNSTEIN_TASK_FILTER "
+        "sentinel so no backlog task matches."
+    )
+    if gh_synced > 0:
+        console.print(
+            "[yellow]  note:[/yellow] this backlog was just auto-synced from "
+            f"GitHub ({gh_synced} issue(s)); if you meant to run the goal, "
+            "disable github.sync_backlog (it is opt-in and off by default)."
+        )
+
+
+def _sync_and_plan_tasks(
+    seed: Any,
+    workdir: Path,
+    port: int,
+    server_url: str,
+    auth_token: str | None,
+    force_fresh: bool,
+    worker_role: str | None = None,
+) -> tuple[int, str, Any]:
+    """Sync backlog to server, import workflows, and determine planning mode.
+
+    Returns:
+        Tuple of (backlog_count, manager_task_id, prior_session).
+    """
+    from bernstein.core.session import check_resume_session
+    from bernstein.core.sync import sync_backlog_to_server
+
+    # Sync open GitHub Issues into .sdd/backlog/open/ before server sync.
+    # Opt-in only (github.sync_backlog / BERNSTEIN_SYNC_GITHUB_BACKLOG);
+    # off by default so it cannot silently displace a seeded goal.
+    gh_count = _maybe_sync_github_backlog(seed, workdir)
+    if gh_count > 0:
+        console.print(f"  [dim]github[/dim]  synced {gh_count} issue(s) to backlog")
+
+    _resume = seed.session.resume
+    _stale_minutes = seed.session.stale_after_minutes
+    prior_session = check_resume_session(
+        workdir,
+        force_fresh=force_fresh or not _resume,
+        stale_minutes=_stale_minutes,
+    )
+
+    task_filter = os.environ.get("BERNSTEIN_TASK_FILTER")
+    sync_result = sync_backlog_to_server(
+        workdir,
+        server_url=server_url,
+        task_filter=task_filter,
+        auth_token=auth_token,
+    )
+    backlog_count = len(sync_result.created) + len(sync_result.skipped)
+
+    # Import unchecked items from TODO.md / TASKS.md / .plan if present.
+    try:
+        from bernstein.core.workflow_importer import import_workflow_tasks
+
+        with httpx.Client(timeout=10.0, headers=_bearer_headers(auth_token)) as _wf_client:
+            _wf_imported = import_workflow_tasks(workdir, _wf_client, server_url)
+        if _wf_imported:
+            console.print(f"  [dim]workflow[/dim] {_wf_imported} task(s) from workflow file(s)")
+            backlog_count += _wf_imported
+    except Exception as _wf_exc:
+        logger.debug("Workflow import skipped: %s", _wf_exc)
+
+    _warn_if_goal_shadowed_by_backlog(
+        seed,
+        backlog_count=backlog_count,
+        prior_session=prior_session,
+        gh_synced=gh_count,
+    )
+
+    manager_task_id = ""
+    # Resume reconcile (#2798): only short-circuit planning when the prior
+    # session actually finished its queued work. A session stopped mid-flight
+    # (open/pending tasks that the wiped runtime queue no longer holds) must
+    # NOT resume as "done previously" -- that let the run self-declare complete
+    # with the deliverable unproduced and the queued work silently dropped.
+    # Fall through to work the backlog or re-plan the goal instead.
+    if prior_session is not None and not prior_session.has_unfinished_work():
+        console.print(f"  [dim]resume[/dim]  {len(prior_session.completed_task_ids)} done previously")
+    elif backlog_count > 0:
+        _suffix = " (resuming interrupted run)" if prior_session is not None else ""
+        console.print(f"  [dim]tasks[/dim]   {backlog_count} from backlog{_suffix}")
+    else:
+        if prior_session is not None:
+            console.print("  [dim]replan[/dim]  interrupted run had unfinished work; re-planning the goal")
+        if worker_role:
+            manager_task_id = _inject_worker_task(
+                seed,
+                workdir,
+                port,
+                role=worker_role,
+                server_url=server_url,
+                auth_token=auth_token,
+            )
+            console.print(f"  [dim]plan[/dim]    single {worker_role} agent will work the goal directly")
+        else:
+            manager_task_id = _inject_manager_task(
+                seed,
+                workdir,
+                port,
+                server_url=server_url,
+                auth_token=auth_token,
+            )
+            console.print("  [dim]plan[/dim]    manager agent will decompose goal")
+
+    return backlog_count, manager_task_id, prior_session
+
+
+def _describe_cost_estimate(backlog_count: int, model: str | None) -> str:
+    """Build the startup cost-estimate fragment from the synced task count.
+
+    ``backlog_count`` is the number of tasks actually submitted to the task
+    server (backlog sync or plan-file post), so the printed count can never
+    disagree with the run's real task list. When it is zero the manager
+    agent has not planned yet: the count is unknown, so a per-task rate is
+    shown and no count is printed.
+
+    Args:
+        backlog_count: Tasks synced/posted to the server; 0 means planning
+            is deferred to the manager agent.
+        model: Configured model name, or ``None``/empty when unset.
+
+    Returns:
+        Plain-text fragment for the startup cost line.
+    """
+    from bernstein.core.cost import estimate_run_cost
+
+    if backlog_count > 0:
+        if model:
+            low, high = estimate_run_cost(backlog_count, model)
+            return f"~${low:.2f}-${high:.2f} ({backlog_count} task(s), {model})"
+        return f"unknown (no model configured, {backlog_count} task(s))"
+    if model:
+        low, high = estimate_run_cost(1, model)
+        return f"~${low:.2f}-${high:.2f} per task ({model}, task count pending planning)"
+    return "unknown (no model configured, task count pending planning)"
+
+
+def _record_team_manifest_lineage(seed: SeedConfig, workdir: Path) -> None:
+    """Anchor a run's team manifest in the audit chain (issue #2248, AC3).
+
+    When the seed was expanded from a ``team_manifest:`` reference, append
+    a ``team.manifest.resolve`` event to ``.sdd/audit`` and pin the
+    manifest in ``teams.lock``, so "which team produced this run" is
+    answerable from the chain. Best-effort by design: lineage recording
+    must never abort a run.
+    """
+    name = getattr(seed, "team_manifest", None)
+    digest = getattr(seed, "team_manifest_digest", None)
+    if not name or not digest:
+        return
+    try:
+        from bernstein.core.teams.audit import record_run_team_manifest
+
+        record_run_team_manifest(workdir, name=name, digest=digest)
+    except Exception as exc:  # lineage anchoring must never crash bootstrap
+        from bernstein.core.security.sanitize import sanitize_log
+
+        logger.warning("team manifest lineage recording failed for %r: %s", sanitize_log(name), exc)
+
+
+def bootstrap_from_seed(
+    seed_path: Path,
+    workdir: Path,
+    port: int = 8052,
+    cells: int | None = None,
+    remote: bool = False,
+    force_fresh: bool = False,
+    evolve_mode: bool = False,
+    cli: str | None = None,
+    model: str | None = None,
+    ab_test: bool = False,
+    worker_role: str | None = None,
+) -> BootstrapResult:
+    """Full bootstrap: parse seed -> init .sdd -> start server -> plan -> orchestrate.
+
+    This is the main entry point for the "one command" UX. It:
+    1. Parses the seed file (bernstein.yaml).
+    2. Creates the .sdd/ workspace if needed.
+    3. Starts the task server.
+    4. Waits for the server to be ready.
+    5. Injects the initial manager task with goal + constraints + context
+       (skipped when a valid session exists, unless force_fresh=True).
+    6. Starts the spawner (which launches the manager agent).
+
+    Args:
+        seed_path: Path to the bernstein.yaml seed file.
+        workdir: Project root directory.
+        port: TCP port for the task server.
+        cells: Number of parallel cells. If None, reads from seed config.
+        remote: If True, bind to 0.0.0.0 for remote access.
+        force_fresh: Ignore any saved session and start from scratch.
+        evolve_mode: Retained for back-compat. Uvicorn ``--reload`` was
+            removed 2026-04-17 ; this flag no longer alters
+            the server launch. Agents pick up source changes only when
+            the supervisor restarts the server for real (crash/health).
+        cli: Optional CLI override (e.g. "claude", "codex"). Overrides seed config.
+        model: Optional model override (e.g. "opus", "sonnet"). Overrides seed config.
+
+    Returns:
+        BootstrapResult with PIDs and task ID.
+
+    Raises:
+        bernstein.core.seed.SeedError: If the seed file is invalid.
+        RuntimeError: If the server fails to start or respond, or if another
+            Bernstein instance is already running in this directory.
+    """
+    # Singleton guard: prevent two instances on the same workdir
+    _acquire_pid_lock(workdir)
+
+    # Resolve cluster-aware settings
+    bind_host = "0.0.0.0" if remote else _resolve_bind_host()
+    auth_token = _resolve_auth_token(workdir)
+    server_url = _resolve_server_url(port)
+
+    # ── Compact bootstrap: all steps on one screen ──
+
+    # 0. Pre-startup git hygiene - clean stale worktrees/branches from prior runs
+    _run_git_hygiene(workdir)
+
+    # 1. Parse seed
+    seed = parse_seed(seed_path)
+    if cli is not None:
+        object.__setattr__(seed, "cli", cli)
+    if model is not None:
+        object.__setattr__(seed, "model", model)
+    preflight_checks(seed.cli, port)
+    check_config_paths(seed, workdir)
+    effective_cells = cells if cells is not None else seed.cells
+
+    # Anchor the resolved team manifest (issue #2248) in the audit chain
+    # and teams.lock so "which team produced this run" is answerable from
+    # the chain.
+    _record_team_manifest_lineage(seed, workdir)
+
+    # Persist the resolved seed path so downstream tooling (dashboard,
+    # `bernstein status`, debug bundles) can find the real seed file even
+    # when it doesn't live at the default ``workdir/bernstein.yaml``.
+    _resolved_seed_path = seed_path.resolve()
+    _seed_location_path = workdir / ".sdd" / "runtime" / "seed_location.json"
+    try:
+        _seed_location_path.parent.mkdir(parents=True, exist_ok=True)
+        import json as _json
+
+        _seed_location_path.write_text(_json.dumps({"seed_path": str(_resolved_seed_path)}))
+        logger.info("bootstrap_from_seed: persisted seed_path=%s to %s", _resolved_seed_path, _seed_location_path)
+    except OSError as exc:
+        logger.warning("bootstrap_from_seed: failed to persist seed_location.json: %s", exc)
+
+    # 2. Workspace + catalog + index (silent - errors logged, not printed)
+    ensure_sdd(workdir, model=seed.model)
+    _reconcile_dead_owner_before_runtime_cleanup(workdir)
+    _clean_stale_runtime(workdir)
+    _discover_catalog(workdir)
+    _index_codebase_with_timeout(workdir)
+    _check_safety_invariants(workdir)
+
+    # Storage + cluster config (env vars, no output)
+    _apply_storage_env(seed)
+
+    cluster_enabled = (seed.cluster is not None and seed.cluster.enabled) or os.environ.get(
+        "BERNSTEIN_CLUSTER_ENABLED", ""
+    ).lower() in ("1", "true", "yes")
+
+    _apply_compliance_env()
+
+    # Populate CI log parser registry so `bernstein ci fix` and pipeline
+    # self-healing can find GitHub Actions / GitLab CI parsers.
+    _register_ci_parsers()
+
+    # 3. Load secrets provider if configured
+    _load_secrets_provider(seed)
+
+    # 4. Start server (compact output - single line)
+    server_pid = supervised_server(
+        workdir,
+        port,
+        bind_host=bind_host,
+        cluster_enabled=cluster_enabled,
+        auth_token=auth_token,
+        evolve_mode=evolve_mode,
+    )
+    if not _wait_for_server(port, server_url=server_url):
+        from bernstein.cli.errors import BernsteinError
+
+        BernsteinError(
+            what=f"Task server on port {port} did not respond within {_SERVER_READY_TIMEOUT_S}s",
+            why="Server process may have crashed during startup",
+            fix="Check .sdd/runtime/server.log for details",
+        ).print()
+        raise SystemExit(1)
+    console.print(f"  [dim]server[/dim]  :{port} [green]ready[/green]")
+
+    # Register Bernstein as a discoverable MCP server for Claude Code sessions
+    with contextlib.suppress(OSError):
+        _register_mcp_discovery(workdir)
+
+    # 4. Sync backlog / create manager task
+    backlog_count, manager_task_id, _prior_session = _sync_and_plan_tasks(
+        seed,
+        workdir,
+        port,
+        server_url,
+        auth_token,
+        force_fresh,
+        worker_role=worker_role,
+    )
+
+    # Cost estimate (single compact line). Derived from the synced task
+    # count so it can never disagree with the submitted backlog.
+    console.print(f"  [dim]cost[/dim]    {_describe_cost_estimate(backlog_count, seed.model)}")
+
+    # 5. Start spawner + watchdog
+    # Propagate the resolved adapter (e.g. ``mock`` from ``--idle``) explicitly so
+    # the orchestrator subprocess doesn't silently fall back to ``--adapter
+    # claude`` (which would burn real tokens on a GUI-smoke run).
+    _resolved_adapter = getattr(seed, "cli", None) or None
+    if _resolved_adapter in (None, "", "auto"):
+        _resolved_adapter = None
+    spawner_pid = _start_spawner(
+        workdir,
+        port,
+        cells=effective_cells,
+        server_url=server_url,
+        auth_token=auth_token,
+        cluster_enabled=cluster_enabled,
+        ab_test=ab_test,
+        adapter=_resolved_adapter,
+        model=getattr(seed, "model", None) or None,
+        seed_path=_resolved_seed_path,
+    )
+    _start_watchdog(
+        workdir,
+        port,
+        adapter=_resolved_adapter,
+        model=getattr(seed, "model", None) or None,
+        seed_path=_resolved_seed_path,
+    )
+    console.print(f"  [dim]agents[/dim]  spawning (max {seed.max_agents})")
+
+    result = BootstrapResult(
+        seed=seed,
+        server_pid=server_pid,
+        spawner_pid=spawner_pid,
+        manager_task_id=manager_task_id,
+    )
+
+    if seed.notify is not None and seed.notify.on_complete:
+        _send_webhook(
+            seed.notify,
+            {
+                "event": "complete",
+                "goal": seed.goal,
+                "manager_task_id": manager_task_id,
+                "server_pid": server_pid,
+                "spawner_pid": spawner_pid,
+            },
+        )
+
+    return result
+
+
+_WATCHDOG_MODULE = "bernstein.core.orchestration.bootstrap"
+"""Runnable module for the ``python -m`` watchdog launch (issue #2795).
+
+Must resolve to a real code object under ``runpy``. The historical
+``bernstein.core.bootstrap`` name is a compatibility redirect alias whose loader
+returns no code object, so launching it via ``-m`` fails with "No code object
+available" and the watchdog never starts. This module carries the
+``if __name__ == "__main__":`` watchdog entrypoint.
+"""
+
+_WATCHDOG_LAUNCH_GRACE_S: float = 0.5
+"""Seconds to wait for the watchdog to prove it survived launch (issue #2795)."""
+
+
+def _read_watchdog_log_tail(log_path: Path, *, max_chars: int = 500) -> str:
+    """Return the tail of ``watchdog.log`` for a failed-launch error message.
+
+    Args:
+        log_path: Path to the watchdog log sink.
+        max_chars: Cap on returned characters, taken from the end of the file.
+
+    Returns:
+        The trailing log content, or a placeholder when it is empty or unreadable.
+    """
+    try:
+        text = log_path.read_text(errors="replace").strip()
+    except OSError:
+        return "<unavailable>"
+    if not text:
+        return "<empty>"
+    return text[-max_chars:]
+
+
+def _start_watchdog(
+    workdir: Path,
+    port: int,
+    adapter: str | None = None,
+    model: str | None = None,
+    seed_path: Path | None = None,
+) -> int:
+    """Launch the watchdog as a background process.
+
+    Args:
+        workdir: Project root.
+        port: Task server port.
+        adapter: Resolved CLI adapter override (e.g. ``mock`` from ``--idle``).
+            Threaded through so a watchdog-triggered spawner restart doesn't
+            silently drop back to the default ``claude`` adapter.
+        model: ``--model`` override to preserve across spawner restarts.
+        seed_path: Resolved bernstein.yaml path to preserve across
+            watchdog-triggered spawner restarts (see ``_restart_spawner``) --
+            otherwise a restarted spawner would re-derive
+            ``workdir / "bernstein.yaml"`` and silently lose config.
+
+    Returns:
+        PID of the watchdog process.
+    """
+    pid_path = workdir / ".sdd" / "runtime" / "watchdog.pid"
+    log_path = workdir / ".sdd" / "runtime" / "watchdog.log"
+
+    argv = [
+        sys.executable,
+        "-m",
+        # Must be a module ``runpy`` can execute. ``bernstein.core.bootstrap`` is
+        # only a compatibility redirect alias whose loader returns no code object,
+        # so ``python -m`` on it raises "No code object available" and the
+        # watchdog never starts; target the real runnable module (issue #2795).
+        _WATCHDOG_MODULE,
+        "--watchdog",
+        "--port",
+        str(port),
+        # Self-describing so the stop path can attribute an orphaned watchdog to
+        # this checkout by reading its argv, without a live cwd probe (issue
+        # #3312). The subprocess already runs with ``cwd=workdir`` below; this
+        # flag is not consumed for that -- it exists purely so ``ps``/WMI output
+        # carries the workdir as a command-line marker.
+        "--workdir",
+        str(workdir),
+    ]
+    if adapter:
+        argv.extend(["--adapter", adapter])
+    if model:
+        argv.extend(["--model", model])
+    if seed_path:
+        argv.extend(["--seed-path", str(seed_path)])
+        logger.info("_start_watchdog: propagating seed_path=%s", seed_path)
+
+    log_fh = log_path.open("w")
+    proc = subprocess.Popen(
+        argv,
+        stdout=log_fh,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+        cwd=str(workdir),
+    )
+    log_fh.close()
+    pid_path.write_text(str(proc.pid))
+
+    # Confirm the watchdog survived launch. A module-name or import failure makes
+    # the child exit within milliseconds; without this check the failure is
+    # silent -- one line in watchdog.log plus a dead pid file -- while the run
+    # reports itself healthy despite having lost its crash/stall recovery layer
+    # (issue #2795).
+    try:
+        returncode = proc.wait(timeout=_WATCHDOG_LAUNCH_GRACE_S)
+    except subprocess.TimeoutExpired:
+        return proc.pid  # still running after the grace window -> launched OK
+
+    log_tail = _read_watchdog_log_tail(log_path)
+    logger.error(
+        "Recovery watchdog exited immediately (code %s); this run has no crash or stall recovery. watchdog.log: %s",
+        returncode,
+        log_tail,
+    )
+    console.print(
+        f"[bold red]Recovery watchdog failed to start (exit {returncode}); "
+        f"this run has no automatic crash or stall recovery.[/bold red]"
+    )
+    return proc.pid
+
+
+def _watchdog_check_process(
+    *,
+    name: str,
+    pid: int | None,
+    alive_since: float | None,
+    restarts: int,
+    give_up_logged: bool,
+    max_restarts: int,
+    reset_after_s: float,
+    now: float,
+    restart_fn: Any,
+    post_restart_fn: Any | None = None,
+    liveness: Liveness | None = None,
+) -> tuple[float | None, int, bool]:
+    """Check a single watchdog-monitored process and restart if it is not up.
+
+    Anything that is not positively alive is restarted, including a missing or
+    unreadable pidfile. That is deliberate and it is the only safe default for a
+    RECOVERY component: refusing to restart is the destructive choice here, and
+    it is permanent, because nothing else recreates ``spawner.pid`` once it is
+    gone. ``bernstein doctor --fix`` / ``bernstein status --fix``
+    (``cli/commands/status_cmd.py::_fix_stale_pids``) deletes precisely the
+    pidfile of a process that has already crashed, so "crashed, and then its
+    stale pidfile was cleaned up" is an ordinary state that must still recover.
+
+    Teardown is NOT a reason to withhold a restart here, because this process is
+    not alive to see it: ``DrainCoordinator._stop_infrastructure`` kills
+    ``watchdog.pid`` FIRST and only removes pidfiles at the end of
+    ``_phase_cleanup``. The supervisor is already dead before teardown deletes
+    anything. ``run_watchdog`` still checks for teardown before calling this,
+    for the case where the supervisor outlives its own SIGTERM.
+
+    ``liveness`` is the classification of the pidfile this supervisor owns, from
+    :func:`classify_pidfile_liveness` -- the same classifier the CLI's
+    run-completion verdict reads, so the two subsystems cannot disagree about
+    what "gone" means. Its job here is the reverse of its job in the CLI: it
+    prevents an unrelated process that inherited a recycled pid from passing as
+    our live orchestrator and thereby SUPPRESSING a restart the run needs.
+    ``LIVENESS_ALIVE`` is the only value that withholds one.
+
+    Omitting ``liveness`` falls back to a bare ``_is_alive(pid)`` for callers
+    that have no pidfile to classify.
+
+    Returns:
+        Updated (alive_since, restarts, give_up_logged) tuple.
+    """
+    if liveness == LIVENESS_ALIVE or (liveness is None and pid is not None and _is_alive(pid)):
+        if alive_since is None:
+            return now, restarts, give_up_logged
+        if restarts > 0 and (now - alive_since) >= reset_after_s:
+            logger.info(
+                "%s has been healthy for %.0fs - resetting restart counter",
+                name,
+                now - alive_since,
+            )
+            return alive_since, 0, False
+        return alive_since, restarts, give_up_logged
+
+    # Not positively alive: dead, or a pid we cannot attribute to our pidfile.
+    if restarts >= max_restarts:
+        if not give_up_logged:
+            logger.error(
+                "%s exceeded max restarts (%d), giving up; will resume monitoring once the process recovers",
+                name,
+                max_restarts,
+            )
+        return None, restarts, True
+
+    logger.warning("%s (PID %s) is dead, restarting...", name, pid)
+    try:
+        new_pid = restart_fn()
+        if new_pid == -1:
+            return None, restarts, give_up_logged  # skip (e.g. server not alive)
+        logger.info("%s restarted (PID %d)", name, new_pid)
+        restarts += 1
+        if post_restart_fn is not None:
+            post_restart_fn()
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.error(
+            "Failed to restart %s (%s: %s) - will retry next cycle",
+            name,
+            type(exc).__name__,
+            exc,
+        )
+    return None, restarts, give_up_logged
+
+
+def _supervisor_should_stand_down(workdir: Path) -> str | None:
+    """Positive evidence that this supervisor must stop restarting things.
+
+    Returns a short reason, or ``None`` to keep supervising.
+
+    Only POSITIVE evidence counts, because the default has to be to recover: a
+    supervisor that withholds a restart on a merely ambiguous reading leaves the
+    run with no orchestrator and nothing to notice, permanently. Three signals
+    qualify:
+
+    * ``.sdd/runtime/draining`` -- written by ``DrainCoordinator._phase_freeze``
+      when it cannot reach the server to set drain mode, which is exactly the
+      teardown case where this loop would otherwise fight the teardown.
+    * ``watchdog.pid`` no longer naming this process -- we have been superseded
+      or killed (teardown SIGTERMs it first), so we are not the supervisor of
+      record any more and must not act as one.
+    * the run this supervisor's owner record names already journaled
+      ``run_completed`` -- written only by ``Orchestrator.run()``'s own
+      shutdown sequence, right before the process exits on a clean quiescence
+      self-stop (issue #4445). A crash never reaches that code: the process
+      dies before it can journal anything, so the row is absent and the
+      ordinary restart default is untouched. Reading the journal directly
+      (rather than the audit-chain closure marker ``_restart_spawner``
+      reconciles as bookkeeping) keeps this cheap enough to call every poll --
+      the marker it looks for is written once, at the very end of one run's
+      own small journal, not re-derived by re-verifying the whole project's
+      audit history.
+
+    A missing pidfile for a SUPERVISED process is deliberately not on this list.
+    It is the ordinary aftermath of a crash plus ``bernstein doctor --fix``, and
+    must still recover.
+    """
+    runtime = workdir / ".sdd" / "runtime"
+    if (runtime / "draining").exists():
+        return "draining marker present"
+    watchdog_pid_path = runtime / "watchdog.pid"
+    if watchdog_pid_path.exists():
+        try:
+            recorded = int(watchdog_pid_path.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            return None
+        if recorded != os.getpid():
+            return f"watchdog.pid names pid {recorded}, not this supervisor ({os.getpid()})"
+
+    from bernstein.core.orchestration.run_closure_owner import read_spawner_run_owner
+    from bernstein.core.replay.journal import contained_run_journal, load_events
+
+    sdd_dir = workdir / ".sdd"
+    owner = read_spawner_run_owner(sdd_dir)
+    if owner is not None:
+        journal_path = contained_run_journal(sdd_dir / "runs", owner.run_id)
+        events = load_events(journal_path).events if journal_path is not None else []
+        if events and events[-1].get("event") == "run_completed":
+            return f"run {owner.run_id} already self-stopped cleanly (run_completed journaled)"
+    return None
+
+
+def run_watchdog(
+    workdir: Path,
+    port: int,
+    poll_s: float = WATCHDOG_POLL_S,
+    adapter: str | None = None,
+    model: str | None = None,
+    seed_path: Path | None = None,
+) -> None:
+    """Monitor the server and orchestrator, restarting them if they die.
+
+    This blocks forever and should be run as a background daemon.
+
+    The restart counter for each subprocess resets to 0 once the process has
+    been observed alive continuously for ``RESTART_RESET_AFTER_S``. This
+    prevents a single bad day (e.g. one buggy ``/status`` field flapping the
+    server) from permanently disabling the watchdog: a healthy day earns the
+    process its restart budget back. Without this, the watchdog gives up
+    forever after 5 transient failures across the entire run (incident
+    2026-04-11).
+
+    A dead orchestrator is therefore a RECOVERABLE state, not a terminal one,
+    for as long as this loop is running with restart budget left. Anything else
+    that wants to conclude the orchestrator will not come back has to outwait
+    ``poll_s`` -- which is why that period is a shared constant
+    (``process_utils.WATCHDOG_POLL_S``) rather than a private default here, and
+    why the CLI's run-completion verdict sizes its confirmation window from it.
+
+    The loop stands down only on positive teardown evidence (see
+    :func:`_supervisor_should_stand_down`). Everything else recovers, including
+    a supervised process whose pidfile has gone missing.
+
+    Args:
+        workdir: Project root directory.
+        port: Task server port.
+        poll_s: Seconds between health checks.
+        adapter: Resolved CLI adapter override to preserve across
+            watchdog-triggered spawner restarts (see ``_restart_spawner``).
+        model: ``--model`` override to preserve across spawner restarts.
+        seed_path: Resolved bernstein.yaml path to preserve across spawner
+            restarts.
+    """
+    server_pid_path = workdir / ".sdd" / "runtime" / "server.pid"
+    spawner_pid_path = workdir / ".sdd" / "runtime" / "spawner.pid"
+    max_restarts = 5
+    restart_reset_after_s = 120.0  # reset counter after this much continuous uptime
+    server_restarts = 0
+    spawner_restarts = 0
+    server_alive_since: float | None = None
+    spawner_alive_since: float | None = None
+    server_give_up_logged = False
+    spawner_give_up_logged = False
+
+    while True:
+        time.sleep(poll_s)
+        now = time.monotonic()
+
+        stand_down = _supervisor_should_stand_down(workdir)
+        if stand_down is not None:
+            logger.info("Recovery supervisor standing down this cycle: %s", stand_down)
+            continue
+
+        # Check server
+        server_liveness, server_pid = classify_pidfile_liveness(server_pid_path)
+        server_alive_since, server_restarts, server_give_up_logged = _watchdog_check_process(
+            name="Server",
+            pid=server_pid,
+            alive_since=server_alive_since,
+            restarts=server_restarts,
+            give_up_logged=server_give_up_logged,
+            max_restarts=max_restarts,
+            reset_after_s=restart_reset_after_s,
+            now=now,
+            restart_fn=lambda: _start_server(workdir, port),
+            post_restart_fn=lambda: _wait_for_server(port),
+            liveness=server_liveness,
+        )
+
+        # Check orchestrator/spawner (only restart if server is alive). The
+        # command-line markers keep an unrelated process that inherited a
+        # recycled pid from passing as our live orchestrator and suppressing a
+        # restart the run needs.
+        spawner_liveness, spawner_pid = classify_pidfile_liveness(
+            spawner_pid_path,
+            expect_cmdline=ORCHESTRATOR_PROCESS_MARKERS,
+        )
+
+        def _restart_spawner(
+            _spawner_liveness: Liveness = spawner_liveness,
+            _spawner_pid: int | None = spawner_pid,
+        ) -> int:
+            cur_server_pid = _read_pid(server_pid_path)
+            if cur_server_pid is None or not _is_alive(cur_server_pid):
+                return -1  # signal: skip restart
+            if _spawner_liveness == LIVENESS_GONE and _spawner_pid is not None:
+                from bernstein.core.orchestration.run_closure_owner import reconcile_positively_dead_owner
+
+                reconcile_positively_dead_owner(workdir=workdir, dead_pid=_spawner_pid)
+            logger.info("_restart_spawner: restarting with seed_path=%s adapter=%s model=%s", seed_path, adapter, model)
+            return _start_spawner(workdir, port, adapter=adapter, model=model, seed_path=seed_path)
+
+        spawner_alive_since, spawner_restarts, spawner_give_up_logged = _watchdog_check_process(
+            name="Orchestrator",
+            pid=spawner_pid,
+            alive_since=spawner_alive_since,
+            restarts=spawner_restarts,
+            give_up_logged=spawner_give_up_logged,
+            max_restarts=max_restarts,
+            reset_after_s=restart_reset_after_s,
+            now=now,
+            restart_fn=_restart_spawner,
+            liveness=spawner_liveness,
+        )
+
+
+def bootstrap_from_goal(
+    goal: str,
+    workdir: Path,
+    port: int = 8052,
+    cli: str = "auto",
+    cells: int = 1,
+    force_fresh: bool = False,
+    model: str | None = None,
+    ab_test: bool = False,
+    tasks: list[Task] | None = None,
+) -> BootstrapResult:
+    """Bootstrap from an inline goal string (no YAML file needed).
+
+    Creates a minimal SeedConfig from the goal and delegates to the
+    standard bootstrap flow.  When ``cli="auto"`` (the default), the best
+    available CLI agent is detected automatically - no configuration required.
+
+    Args:
+        goal: Plain-text project goal.
+        workdir: Project root directory.
+        port: TCP port for the task server.
+        cli: CLI backend to use, or "auto" to detect automatically.
+        cells: Number of parallel orchestration cells.
+        force_fresh: Ignore any saved session and start from scratch.
+        model: Optional model override (e.g. "opus", "sonnet").
+        tasks: Pre-defined tasks to execute (skips LLM planning).
+
+    Returns:
+        BootstrapResult with PIDs and task ID.
+    """
+    return _bootstrap_from_goal_impl(
+        goal=goal,
+        workdir=workdir,
+        port=port,
+        cli=cli,
+        cells=cells,
+        force_fresh=force_fresh,
+        model=model,
+        ab_test=ab_test,
+        tasks=tasks,
+    )
+
+
+def _goal_sync_and_plan(
+    *,
+    seed: Any,
+    workdir: Path,
+    port: int,
+    server_url: str,
+    auth_token: str | None,
+    force_fresh: bool,
+    tasks: list[Task] | None,
+    icons: Any,
+) -> tuple[int, str, Any]:
+    """Sync backlog, import workflows, post plan tasks for goal-based bootstrap.
+
+    Returns:
+        Tuple of (backlog_count, manager_task_id, sync_result).
+    """
+    from bernstein.core.session import check_resume_session
+    from bernstein.core.sync import sync_backlog_to_server
+
+    # Sync open GitHub Issues into .sdd/backlog/open/ before server sync.
+    # Opt-in only (github.sync_backlog / BERNSTEIN_SYNC_GITHUB_BACKLOG);
+    # off by default so it cannot silently displace a seeded goal.
+    gh_count = _maybe_sync_github_backlog(seed, workdir)
+    if gh_count > 0:
+        console.print(f"[green]{icons.arrow_right}[/green] Synced {gh_count} GitHub issue(s) to backlog")
+
+    # An explicit ``tasks`` payload (typically from ``--plan_file <yaml>``)
+    # is an intentional re-run signal: the operator told us exactly which
+    # tasks to enqueue. Honour that and skip the prior-session short-circuit
+    # so the plan file actually gets loaded.  Previously this path silently
+    # printed "Resuming from previous session" and swallowed the plan.
+    prior_session = None if tasks else check_resume_session(workdir, force_fresh=force_fresh)
+
+    task_filter = os.environ.get("BERNSTEIN_TASK_FILTER")
+    with Status("[bold]Loading tasks...[/bold]", console=console):
+        sync_result = sync_backlog_to_server(
+            workdir,
+            server_url=server_url,
+            task_filter=task_filter,
+            auth_token=auth_token,
+        )
+    backlog_count = len(sync_result.created) + len(sync_result.skipped)
+
+    # Import unchecked items from TODO.md / TASKS.md / .plan if present.
+    try:
+        from bernstein.core.workflow_importer import import_workflow_tasks
+
+        with httpx.Client(timeout=10.0, headers=_bearer_headers(auth_token)) as _wf_client:
+            _wf_imported = import_workflow_tasks(workdir, _wf_client, server_url)
+        if _wf_imported:
+            console.print(f"[green]{icons.arrow_right}[/green] Imported {_wf_imported} task(s) from workflow file(s)")
+            backlog_count += _wf_imported
+    except Exception as _wf_exc:
+        logger.debug("Workflow import skipped: %s", _wf_exc)
+
+    # An explicit ``tasks`` payload is an intentional operator signal and wins
+    # over the seed goal on purpose, so only warn on the plain goal path.
+    if not tasks:
+        _warn_if_goal_shadowed_by_backlog(
+            seed,
+            backlog_count=backlog_count,
+            prior_session=prior_session,
+            gh_synced=gh_count,
+        )
+
+    manager_task_id = ""
+    # Resume reconcile (#2798): only short-circuit when the prior session
+    # finished its queued work. A run stopped mid-flight (open/pending tasks the
+    # wiped runtime queue no longer holds) must re-plan rather than resume as
+    # complete with the deliverable unproduced.
+    if prior_session is not None and not prior_session.has_unfinished_work():
+        completed_count = len(prior_session.completed_task_ids)
+        console.print(
+            f"[bold cyan]Resuming from previous session[/bold cyan] "
+            f"({completed_count} task(s) already completed - skipping re-planning)"
+        )
+    elif tasks:
+        _post_plan_tasks(tasks, server_url, icons, auth_token)
+        backlog_count = len(tasks)
+    elif backlog_count > 0:
+        console.print(
+            f"[green]{icons.arrow_right}[/green] Planning tasks ({backlog_count} found in backlog"
+            + (f", {len(sync_result.skipped)} already synced" if sync_result.skipped else "")
+            + ")"
+        )
+    else:
+        if prior_session is not None:
+            console.print(
+                f"[green]{icons.arrow_right}[/green] Previous run was interrupted with unfinished "
+                "work - re-planning the goal"
+            )
+        with Status("[bold]Creating planning task...[/bold]", console=console):
+            manager_task_id = _inject_manager_task(
+                seed,
+                workdir,
+                port,
+                server_url=server_url,
+                auth_token=auth_token,
+            )
+        console.print(f"[green]{icons.arrow_right}[/green] Planning tasks (manager agent will decompose goal)")
+
+    return backlog_count, manager_task_id, sync_result
+
+
+def _post_plan_tasks(tasks: list[Task], server_url: str, icons: Any, auth_token: str | None = None) -> None:
+    """Post pre-defined plan tasks to the server.
+
+    ``auth_token`` is the bearer token the CLI handed to its own spawned task
+    server; it must ride along on these POSTs or an auth-enabled server rejects
+    the CLI's own ``/tasks`` writes with 401 (the dashboard-auth self-lockout).
+    """
+    import asyncio
+
+    from bernstein.core.planner import _post_task_to_server
+
+    with Status(f"[bold]Posting {len(tasks)} tasks to server...[/bold]", console=console):
+
+        async def _post_all() -> None:
+            async with httpx.AsyncClient(timeout=10.0, headers=_bearer_headers(auth_token)) as client:
+                id_map: dict[str, str] = {}
+                for t in tasks:
+                    t.depends_on = [id_map.get(dep, dep) for dep in t.depends_on]
+                    old_id = t.id
+                    server_id = await _post_task_to_server(client, server_url, t)
+                    t.id = server_id
+                    id_map[old_id] = server_id
+
+        asyncio.run(with_init_timeout(_post_all(), context="posting tasks from plan file"))
+    console.print(f"[green]{icons.arrow_right}[/green] Posted {len(tasks)} tasks from plan file")
+
+
+def _bootstrap_from_goal_impl(
+    *,
+    goal: str,
+    workdir: Path,
+    port: int = 8052,
+    cli: str = "auto",
+    cells: int = 1,
+    force_fresh: bool = False,
+    model: str | None = None,
+    ab_test: bool = False,
+    tasks: list[Task] | None = None,
+) -> BootstrapResult:
+    """Internal implementation of bootstrap_from_goal.
+
+    Creates a minimal SeedConfig from the goal and delegates to the
+    standard bootstrap flow.  When ``cli="auto"`` (the default), the best
+    available CLI agent is detected automatically - no configuration required.
+
+    Args:
+        goal: Plain-text project goal.
+        workdir: Project root directory.
+        port: TCP port for the task server.
+        cli: CLI backend to use, or "auto" to detect automatically.
+        cells: Number of parallel orchestration cells.
+        force_fresh: Ignore any saved session and start from scratch.
+        model: Optional model override (e.g. "opus", "sonnet").
+        tasks: Pre-defined tasks to execute (skips LLM planning).
+
+    Returns:
+        BootstrapResult with PIDs and task ID.
+    """
+    # Singleton guard: prevent two instances on the same workdir
+    _acquire_pid_lock(workdir)
+
+    # 0. Pre-startup git hygiene - clean stale worktrees/branches/skip-worktree files from prior runs (#4394)
+    _run_git_hygiene(workdir)
+
+    seed = SeedConfig(goal=goal, cli=cli, model=model)  # type: ignore[arg-type]
+
+    # Detect first run: no .sdd/ and no bernstein.yaml yet
+    first_run = not (workdir / ".sdd").exists() and not (workdir / "bernstein.yaml").exists()
+    if first_run and cli == "auto":
+        from bernstein.core.agent_discovery import discover_agents_cached
+        from bernstein.core.server_launch import _detect_project_type
+
+        disc = discover_agents_cached()
+        project_type = _detect_project_type(workdir)
+        agent_names = [a.name for a in disc.agents if a.logged_in] or [a.name for a in disc.agents]
+
+        type_note = f"[cyan]{project_type}[/cyan] project" if project_type != "generic" else "project"
+        if agent_names:
+            agents_note = f"  agents: [green]{', '.join(agent_names)}[/green]"
+        else:
+            agents_note = "  [yellow]No agents found - install claude, codex, or gemini[/yellow]"
+
+        console.print(f"[bold]First run detected[/bold] - auto-configuring for {type_note}")
+        console.print(agents_note)
+
+    _icons = get_icons()
+    # Callers that drive a pre-seeded backlog (e.g. the mock demo) pass no goal
+    # on purpose; don't print an empty "Goal:" line in that case.
+    if goal.strip():
+        console.print(f"[green]{_icons.arrow_right}[/green] Goal: [bold]{goal[:80]}[/bold]")
+    try:
+        from bernstein.core.complexity_advisor import ComplexityMode, suggest_goal_execution_mode
+
+        suggestion = suggest_goal_execution_mode(goal)
+        if suggestion is not None and suggestion.mode == ComplexityMode.SINGLE_AGENT:
+            console.print(
+                "[yellow]Suggestion:[/yellow] this goal looks simple enough for a single-agent session "
+                f"({suggestion.reason})."
+            )
+    except Exception:
+        logger.debug("Failed to compute inline goal execution suggestion", exc_info=True)
+
+    # Pre-flight: verify binary, API key, and port before touching anything.
+    with Status("[bold]Running pre-flight checks...[/bold]", console=console):
+        preflight_checks(cli, port)
+
+    # Initialise workspace
+    with Status("[bold]Creating workspace...[/bold]", console=console):
+        created = ensure_sdd(workdir, model=model)
+        if first_run and not (workdir / "bernstein.yaml").exists():
+            auto_write_bernstein_yaml(workdir)
+        _reconcile_dead_owner_before_runtime_cleanup(workdir)
+        _clean_stale_runtime(workdir)
+    if created:
+        console.print(f"[green]{_icons.arrow_right}[/green] Created .sdd/ workspace")
+    else:
+        console.print(f"[green]{_icons.arrow_right}[/green] Workspace ready")
+
+    with Status("[bold]Loading agent catalog...[/bold]", console=console):
+        _discover_catalog(workdir)
+    console.print(f"[green]{_icons.arrow_right}[/green] Agent catalog loaded")
+
+    # Index codebase with a hard 10s deadline - don't block startup.
+    # We must NOT use ThreadPoolExecutor as a context manager because its
+    # __exit__ calls shutdown(wait=True), which blocks until the thread
+    # finishes even after the timeout fires.
+    _index_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    _index_future = _index_pool.submit(_build_codebase_index, workdir)
+    with Status("[bold]Indexing codebase...[/bold]", console=console):
+        try:
+            _index_future.result(timeout=10)
+        except concurrent.futures.TimeoutError:
+            console.print(f"[yellow]{_icons.arrow_right}[/yellow] Indexing taking too long - continuing in background")
+    _index_pool.shutdown(wait=False)
+    console.print(f"[green]{_icons.arrow_right}[/green] Codebase indexed")
+
+    with Status("[bold]Checking safety invariants...[/bold]", console=console):
+        from bernstein.evolution.invariants import verify_invariants, write_lockfile
+
+        ok, violations = verify_invariants(workdir)
+        if not ok:
+            console.print(f"[bold red]SAFETY: {len(violations)} locked file(s) modified[/bold red]")
+            for v in violations:
+                console.print(f"  [red]{v}[/red]")
+        write_lockfile(workdir)
+
+    # Populate CI log parser registry.
+    _register_ci_parsers()
+
+    bind_host = _resolve_bind_host()
+    auth_token = _resolve_auth_token(workdir)
+    server_url = _resolve_server_url(port)
+
+    with Status(f"[bold]Starting task server on {bind_host}:{port}...[/bold]", console=console):
+        server_pid = supervised_server(workdir, port, bind_host=bind_host)
+        if not _wait_for_server(port, server_url=server_url):
+            from bernstein.cli.errors import BernsteinError
+
+            BernsteinError(
+                what=f"Task server on port {port} did not respond within {_SERVER_READY_TIMEOUT_S}s",
+                why="Server process may have crashed during startup",
+                fix="Check .sdd/runtime/server.log for details",
+            ).print()
+            raise SystemExit(1)
+    console.print(f"[green]{_icons.arrow_right}[/green] Task server ready (PID {server_pid}, {bind_host}:{port})")
+
+    # Register Bernstein as a discoverable MCP server for Claude Code sessions
+    with contextlib.suppress(OSError):
+        _register_mcp_discovery(workdir)
+
+    # Sync backlog and determine planning mode
+    backlog_count, manager_task_id, _sync_result = _goal_sync_and_plan(
+        seed=seed,
+        workdir=workdir,
+        port=port,
+        server_url=server_url,
+        auth_token=auth_token,
+        force_fresh=force_fresh,
+        tasks=tasks,
+        icons=_icons,
+    )
+
+    # Cost estimation - show before spawning agents. Derived from the synced
+    # task count so it can never disagree with the submitted backlog.
+    console.print(f"[bold yellow]Cost estimate:[/bold yellow] {_describe_cost_estimate(backlog_count, model)}")
+
+    cell_label = f"{cells} cells" if cells > 1 else "single cell"
+    # Propagate the resolved cli adapter explicitly so the orchestrator
+    # subprocess does not silently default to ``--adapter claude``.  Matters
+    # for ``--idle`` (cli="mock"), seed-pinned adapters, and any other
+    # operator override that should not be lost across the Popen boundary.
+    _resolved_adapter = cli if cli not in (None, "", "auto") else None
+    with Status(f"[bold]Spawning agents ({cell_label})...[/bold]", console=console):
+        spawner_pid = _start_spawner(
+            workdir,
+            port,
+            cells=cells,
+            ab_test=ab_test,
+            adapter=_resolved_adapter,
+            model=model,
+        )
+        _start_watchdog(workdir, port, adapter=_resolved_adapter, model=model)
+    console.print(f"[green]{_icons.arrow_right}[/green] Spawning agents (PID {spawner_pid})")
+
+    console.print("\n[bold green]Dashboard ready.[/bold green] Use [bold]bernstein stop[/bold] to stop.")
+
+    return BootstrapResult(
+        seed=seed,
+        server_pid=server_pid,
+        spawner_pid=spawner_pid,
+        manager_task_id=manager_task_id,
+    )
+
+
+if __name__ == "__main__":
+    import argparse as _argparse
+
+    _parser = _argparse.ArgumentParser()
+    _parser.add_argument("--watchdog", action="store_true")
+    _parser.add_argument("--port", type=int, default=8052)
+    _parser.add_argument("--adapter", type=str, default=None)
+    _parser.add_argument("--model", type=str, default=None)
+    _parser.add_argument(
+        "--seed-path",
+        type=str,
+        default=os.environ.get("BERNSTEIN_SEED_PATH", "").strip() or None,
+        help="Resolved bernstein.yaml path, threaded through from bootstrap_from_seed().",
+    )
+    _parser.add_argument(
+        "--workdir",
+        type=str,
+        default=None,
+        help=(
+            "Project root this watchdog was launched for. Not read by the "
+            "watchdog itself (its cwd already is workdir) -- it is only a "
+            "command-line marker so 'bernstein stop --force' can attribute an "
+            "orphaned watchdog to this checkout when it has no live cwd probe "
+            "to fall back on (issue #3312)."
+        ),
+    )
+    _args = _parser.parse_args()
+
+    if _args.watchdog:
+        from bernstein.core.json_logging import setup_json_logging
+
+        setup_json_logging()
+
+        if not any(isinstance(h, logging.StreamHandler) for h in logging.getLogger().handlers):
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+            )
+        _watchdog_seed_path = Path(_args.seed_path) if _args.seed_path else None
+        logger.info("watchdog __main__: starting with seed_path=%s", _watchdog_seed_path)
+        run_watchdog(Path.cwd(), _args.port, adapter=_args.adapter, model=_args.model, seed_path=_watchdog_seed_path)
+
+
+# ---------------------------------------------------------------------------
+# Initialization timeout guard (T583)
+# ---------------------------------------------------------------------------
+
+INIT_TIMEOUT_SECONDS: float = 30.0
+
+
+async def with_init_timeout[T](
+    coro: _Awaitable[T],
+    *,
+    timeout: float = INIT_TIMEOUT_SECONDS,
+    context: str = "initialization",
+) -> T:
+    """Wrap an awaitable with a 30-second initialization timeout guard (T583).
+
+    Prevents deadlocks during startup by raising :class:`asyncio.TimeoutError`
+    if the awaitable does not complete within *timeout* seconds.
+
+    Args:
+        coro: Awaitable to wrap.
+        timeout: Timeout in seconds (default: 30).
+        context: Human-readable context for the timeout log message.
+
+    Returns:
+        Result of the awaitable.
+
+    Raises:
+        asyncio.TimeoutError: If the awaitable exceeds *timeout* seconds.
+    """
+    try:
+        async with _asyncio.timeout(timeout):
+            return await coro
+    except TimeoutError:
+        logger.error(
+            "Initialization timeout after %.0fs during '%s' - possible deadlock",
+            timeout,
+            context,
+        )
+        raise

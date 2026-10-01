@@ -1,0 +1,62 @@
+{
+  "Smells": {
+    "LongLambdaFunction": {
+      "enable": true,
+      "max_chars": 80
+    },
+    "ComplexConditional": {
+      "enable": true,
+      "max_conditions": 2
+    },
+    "ComplexMethod": {
+      "enable": true,
+      "max_complexity": 7
+    },
+    "LongMessageChain": {
+      "max_chain" :2,
+      "enable": true
+    },
+    "EmptyCatchBlock": {
+      "enable": true
+    },
+    "LongIdentifier": {
+      "enable": true,
+      "max_length": 20
+    },
+    "LongMethod": {
+      "enable": true,
+      "max_length": 67
+    },
+    "LongParameterList": {
+      "enable": true,
+      "max_params": 4
+    },
+    "LongStatement": {
+      "enable": true,
+      "max_tokens": 80
+    },
+    "MagicNumber": {
+      "enable": true
+    },
+    "MissingDefault": {
+      "enable": true
+    }
+  },
+  "skip_directories": {
+    "names": [
+      "build",
+      "venv",
+      "dist",
+      ".venv",
+      "test",
+      "tests"
+    ],
+    "patterns": [
+      "^.*cache$",
+      "^temp.*"
+    ]
+  },
+    "mode": {
+    "debug": false
+  }
+}

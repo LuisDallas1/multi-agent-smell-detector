@@ -1,0 +1,318 @@
+File,Smell,Count
+Agently/agently/builtins/actions/RuntimePreflight.py,Long Identifier,2
+Agently/agently/builtins/blocks/ObserveBlock.py,Empty Catch Block,1
+Agently/agently/builtins/blocks/ObserveBlock.py,Long Identifier,2
+Agently/agently/builtins/plugins/ActionExecutor/BashSandboxActionExecutor.py,Magic Number,2
+Agently/agently/builtins/plugins/ActionExecutor/CodeExecutionActionExecutor.py,Complex Method,3
+Agently/agently/builtins/plugins/ExecutionResourceProvider/LandlockExecutionHelper.py,Long Message Chain,1
+Agently/agently/builtins/plugins/ModelRequester/AnthropicCompatible/modules/transport.py,Empty Catch Block,4
+Agently/agently/builtins/plugins/ResponseParser/modules/code_fence.py,Long Identifier,1
+Agently/agently/builtins/plugins/SessionMemory/ContextSource.py,Complex Method,1
+Agently/agently/core/application/AgentTask/TaskBoardStrategy.py,Complex Conditional,1
+Agently/agently/core/context/TaskContext.py,Complex Method,1
+Agently/agently/core/orchestration/TriggerFlow/process/BaseProcess.py,Long Parameter List,1
+Agently/agently/core/orchestration/TriggerFlow/process/BaseProcess.py,Missing Default,1
+Agently/agently/core/storage/Retrieval.py,Long Lambda Function,1
+Agently/agently/types/plugins/Blocks.py,Long Identifier,1
+Agently/agently/types/plugins/ContextSource.py,Long Statement,1
+Agently/agently/utils/StreamingJSONParser.py,Long Method,3
+Cirq/cirq-core/cirq/_compat.py,Long Message Chain,1
+Cirq/cirq-core/cirq/circuits/moment.py,Empty Catch Block,1
+Cirq/cirq-core/cirq/circuits/optimization_pass.py,Complex Method,1
+Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py,Long Lambda Function,1
+Cirq/cirq-core/cirq/contrib/quantum_volume/quantum_volume.py,Long Lambda Function,1
+Cirq/cirq-core/cirq/devices/unconstrained_device_test.py,Long Statement,1
+Cirq/cirq-core/cirq/interop/quirk/cells/input_rotation_cells.py,Long Lambda Function,1
+Cirq/cirq-core/cirq/interop/quirk/cells/input_rotation_cells_test.py,Long Method,1
+Cirq/cirq-core/cirq/ops/common_gates.py,Missing Default,1
+Cirq/cirq-core/cirq/ops/fsim_gate.py,Complex Conditional,1
+Cirq/cirq-core/cirq/ops/fsim_gate_test.py,Long Method,2
+Cirq/cirq-core/cirq/ops/global_phase_op.py,Complex Conditional,1
+Cirq/cirq-core/cirq/ops/pauli_string.py,Missing Default,1
+Cirq/cirq-core/cirq/ops/pauli_string_test.py,Long Method,1
+Cirq/cirq-core/cirq/ops/qubit_manager_test.py,Long Identifier,2
+Cirq/cirq-core/cirq/ops/uniform_superposition_gate.py,Complex Method,1
+Cirq/cirq-core/cirq/protocols/apply_unitary_protocol.py,Long Message Chain,1
+Cirq/cirq-core/cirq/qis/clifford_tableau.py,Complex Conditional,2
+Cirq/cirq-core/cirq/qis/entropy_test.py,Magic Number,1
+Cirq/cirq-core/cirq/qis/measures.py,Complex Conditional,1
+Cirq/cirq-core/cirq/sim/classical_simulator.py,Complex Method,1
+Cirq/cirq-core/cirq/sim/sparse_simulator.py,Long Statement,10
+Cirq/cirq-core/cirq/transformers/analytical_decompositions/two_qubit_to_sqrt_iswap.py,Complex Method,1
+Cirq/cirq-core/cirq/transformers/diagonal_optimization.py,Complex Method,1
+Cirq/cirq-core/cirq/transformers/eject_phased_paulis.py,Complex Conditional,1
+Cirq/cirq-core/cirq/transformers/gauge_compiling/gauge_compiling_test_utils_test.py,Long Statement,2
+Cirq/cirq-core/cirq/transformers/merge_single_qubit_gates.py,Long Lambda Function,1
+Cirq/cirq-core/cirq/transformers/qubit_management_transformers.py,Complex Method,1
+Cirq/cirq-core/cirq/transformers/routing/line_initial_mapper.py,Magic Number,1
+Cirq/cirq-core/cirq/transformers/synchronize_terminal_measurements.py,Complex Conditional,1
+Cirq/cirq-core/cirq/transformers/transformer_api.py,Long Lambda Function,1
+Cirq/cirq-core/cirq/transformers/transformer_primitives.py,Long Lambda Function,2
+Cirq/cirq-core/cirq/transformers/transformer_primitives_test.py,Long Lambda Function,1
+Cirq/cirq-core/cirq/work/observable_measurement_data.py,Complex Conditional,1
+Cirq/cirq-core/cirq/work/observable_measurement_data.py,Long Message Chain,1
+Cirq/cirq-google/cirq_google/engine/engine_client.py,Long Message Chain,1
+Cirq/cirq-google/cirq_google/engine/engine_job.py,Empty Catch Block,1
+Cirq/cirq-google/cirq_google/line/placement/anneal_test.py,Complex Method,1
+Cirq/cirq-google/cirq_google/line/placement/line_test.py,Magic Number,1
+Cirq/cirq-google/cirq_google/line/placement/optimization.py,Complex Method,1
+Cirq/cirq-google/cirq_google/ops/fsim_gate_family.py,Complex Conditional,1
+Cirq/cirq-google/cirq_google/serialization/arg_func_langs.py,Magic Number,1
+Cirq/cirq-google/cirq_google/serialization/arg_func_langs_test.py,Magic Number,2
+Cirq/cirq-google/cirq_google/serialization/op_serializer.py,Complex Method,1
+Cirq/cirq-google/cirq_google/study/finite_random_variable_test.py,Long Lambda Function,1
+Cirq/cirq-google/cirq_google/workflow/quantum_runtime.py,Complex Method,1
+Cirq/cirq-google/cirq_google/workflow/qubit_placement_test.py,Long Message Chain,1
+Cirq/cirq-ionq/cirq_ionq/ionq_gateset.py,Long Lambda Function,1
+Cirq/cirq-ionq/cirq_ionq/ionq_native_target_gateset.py,Long Lambda Function,1
+Cirq/cirq-pasqal/cirq_pasqal/pasqal_qubits.py,Long Parameter List,1
+Cirq/dev_tools/import_test.py,Complex Method,1
+Cirq/dev_tools/incremental_coverage_test.py,Long Identifier,1
+EvoScientist/EvoScientist/channels/config.py,Long Identifier,2
+EvoScientist/EvoScientist/channels/consumer.py,Long Method,1
+EvoScientist/EvoScientist/channels/imessage/rpc_client.py,Long Statement,3
+EvoScientist/EvoScientist/channels/wechat/serve.py,Complex Method,1
+EvoScientist/EvoScientist/deploy/server.py,Long Parameter List,1
+bernstein/src/bernstein/adapters/claude_stream_parser.py,Missing Default,1
+bernstein/src/bernstein/adapters/council_runner.py,Long Method,2
+bernstein/src/bernstein/cli/commands/approve_cmd.py,Empty Catch Block,1
+bernstein/src/bernstein/cli/commands/cluster_cmd.py,Long Parameter List,1
+bernstein/src/bernstein/cli/commands/evolve_cmd.py,Long Method,1
+bernstein/src/bernstein/cli/commands/export_cmd.py,Long Statement,2
+bernstein/src/bernstein/cli/commands/status_cmd.py,Long Parameter List,3
+bernstein/src/bernstein/cli/commands/task_cmd.py,Long Message Chain,1
+bernstein/src/bernstein/cli/display/crt_effects.py,Empty Catch Block,1
+bernstein/src/bernstein/cli/display/image_renderer.py,Missing Default,1
+bernstein/src/bernstein/cli/display/leaderboard.py,Long Lambda Function,1
+bernstein/src/bernstein/cli/display/terminal_caps.py,Magic Number,2
+bernstein/src/bernstein/cli/doctor/suggest_docs.py,Long Message Chain,1
+bernstein/src/bernstein/core/admission/engine.py,Long Lambda Function,4
+bernstein/src/bernstein/core/agents/agent_trust.py,Missing Default,1
+bernstein/src/bernstein/core/config/upgrade_executor.py,Missing Default,1
+bernstein/src/bernstein/core/interop/a2a_consume.py,Complex Method,1
+bernstein/src/bernstein/core/knowledge/conventions.py,Long Lambda Function,1
+bernstein/src/bernstein/core/knowledge/graphify_code_graph.py,Long Method,1
+bernstein/src/bernstein/core/lineage/v2_store.py,Long Method,1
+bernstein/src/bernstein/core/observability/debug_bundle.py,Empty Catch Block,5
+bernstein/src/bernstein/core/observability/sla_eval.py,Long Method,1
+bernstein/src/bernstein/core/observability/trace_store.py,Complex Conditional,1
+bernstein/src/bernstein/core/orchestration/best_of_n.py,Long Lambda Function,1
+bernstein/src/bernstein/core/orchestration/bootstrap.py,Long Message Chain,3
+bernstein/src/bernstein/core/orchestration/orchestrator_config.py,Empty Catch Block,1
+bernstein/src/bernstein/core/orchestration/refinement_loop.py,Long Method,1
+bernstein/src/bernstein/core/orchestration/schedule_kinds.py,Magic Number,1
+bernstein/src/bernstein/core/orchestration/tracker_pipeline.py,Complex Conditional,1
+bernstein/src/bernstein/core/persistence/checkpoint.py,Magic Number,1
+bernstein/src/bernstein/core/persistence/journal_export.py,Long Method,1
+bernstein/src/bernstein/core/plugins_core/__init__.py,Long Statement,1
+bernstein/src/bernstein/core/preview/manager.py,Long Method,1
+bernstein/src/bernstein/core/protocols/cluster/cluster.py,Long Parameter List,1
+bernstein/src/bernstein/core/protocols/mcp/mcp_gateway.py,Complex Conditional,1
+bernstein/src/bernstein/core/protocols/mcp/mcp_sandbox.py,Empty Catch Block,1
+bernstein/src/bernstein/core/protocols/mcp/stateless_core.py,Magic Number,9
+bernstein/src/bernstein/core/quality/graduation.py,Missing Default,1
+bernstein/src/bernstein/core/quality/retrospective.py,Complex Conditional,1
+bernstein/src/bernstein/core/quality/review_pipeline/verdict.py,Long Message Chain,1
+bernstein/src/bernstein/core/quality/test_impact.py,Complex Conditional,1
+bernstein/src/bernstein/core/replay/journal.py,Complex Conditional,1
+bernstein/src/bernstein/core/routes/graphql_api.py,Missing Default,1
+bernstein/src/bernstein/core/routes/predictive.py,Long Message Chain,2
+bernstein/src/bernstein/core/routes/webhooks.py,Missing Default,1
+bernstein/src/bernstein/core/routing/cascade_router.py,Complex Conditional,1
+bernstein/src/bernstein/core/routing/llm.py,Long Lambda Function,1
+bernstein/src/bernstein/core/routing/route_decision.py,Long Parameter List,3
+bernstein/src/bernstein/core/routing/router_policies.py,Long Lambda Function,1
+bernstein/src/bernstein/core/security/capability_delta.py,Long Parameter List,1
+bernstein/src/bernstein/core/security/input_refusal.py,Complex Conditional,1
+bernstein/src/bernstein/core/security/path_containment.py,Complex Method,1
+bernstein/src/bernstein/core/security/security_posture.py,Missing Default,1
+bernstein/src/bernstein/core/server/dashboard_auth.py,Long Message Chain,3
+bernstein/src/bernstein/core/server/request_logging.py,Long Message Chain,1
+bernstein/src/bernstein/core/tasks/batch_api.py,Long Message Chain,1
+bernstein/src/bernstein/core/tournament/__init__.py,Long Statement,1
+bernstein/src/bernstein/core/trackers/builtin/asana_adapter.py,Complex Method,3
+bernstein/src/bernstein/core/volunteer/review_task.py,Magic Number,5
+bernstein/src/bernstein/core/volunteer/verification_check_run.py,Complex Conditional,1
+bernstein/src/bernstein/eval/promotion.py,Long Identifier,8
+bernstein/src/bernstein/evolution/gate.py,Missing Default,1
+bernstein/src/bernstein/mcp/server.py,Long Message Chain,1
+bernstein/src/bernstein/plugins/manager.py,Complex Conditional,1
+bernstein/src/bernstein/plugins/reporters.py,Long Statement,1
+bernstein/src/bernstein/sdd/spec_pipeline/receipt.py,Long Statement,7
+dynamiq/dynamiq/callbacks/streaming.py,Long Message Chain,1
+dynamiq/dynamiq/checkpoints/backends/filesystem.py,Empty Catch Block,2
+dynamiq/dynamiq/components/retrievers/chroma.py,Long Parameter List,1
+dynamiq/dynamiq/components/retrievers/milvus.py,Long Parameter List,1
+dynamiq/dynamiq/components/retrievers/qdrant.py,Long Parameter List,1
+dynamiq/dynamiq/evaluations/metrics/context_recall.py,Long Method,1
+dynamiq/dynamiq/memory/long_term/backends/pgvector.py,Magic Number,1
+dynamiq/dynamiq/nodes/agents/prompts/manager.py,Complex Method,1
+dynamiq/dynamiq/nodes/knowledge_graphs/entity_extractor.py,Empty Catch Block,1
+dynamiq/dynamiq/nodes/knowledge_graphs/writer.py,Long Parameter List,1
+dynamiq/dynamiq/nodes/llms/deepinfra.py,Long Statement,1
+dynamiq/dynamiq/nodes/operators/operators.py,Long Lambda Function,1
+dynamiq/dynamiq/nodes/rankers/llm.py,Long Identifier,2
+dynamiq/dynamiq/nodes/tools/daytona_sandbox.py,Long Parameter List,1
+dynamiq/dynamiq/nodes/tools/utils.py,Complex Conditional,1
+dynamiq/dynamiq/nodes/transformers/sort_list.py,Long Lambda Function,1
+dynamiq/dynamiq/nodes/writers/milvus.py,Long Statement,4
+dynamiq/dynamiq/utils/env.py,Long Statement,1
+dynamiq/dynamiq/utils/feedback.py,Missing Default,1
+fast-agent/scripts/cpd.py,Long Method,1
+fast-agent/scripts/docs.py,Magic Number,1
+fast-agent/src/fast_agent/acp/__init__.py,Long Statement,3
+fast-agent/src/fast_agent/acp/permission_store.py,Magic Number,2
+fast-agent/src/fast_agent/acp/server/agent_acp_server.py,Long Parameter List,1
+fast-agent/src/fast_agent/acp/server/session_runtime.py,Long Message Chain,2
+fast-agent/src/fast_agent/acp/slash/handlers/mcp.py,Long Method,1
+fast-agent/src/fast_agent/agents/subagent_transcript.py,Complex Conditional,1
+fast-agent/src/fast_agent/agents/workflow/maker_agent.py,Missing Default,1
+fast-agent/src/fast_agent/cli/checks/structured_tools_probe.py,Long Method,1
+fast-agent/src/fast_agent/cli/runtime/runner.py,Long Identifier,3
+fast-agent/src/fast_agent/commands/handlers/_text_utils.py,Long Statement,1
+fast-agent/src/fast_agent/commands/handlers/models_manager.py,Long Message Chain,1
+fast-agent/src/fast_agent/core/agent_card_function_tool_validation.py,Empty Catch Block,3
+fast-agent/src/fast_agent/core/agent_card_loader.py,Long Parameter List,1
+fast-agent/src/fast_agent/core/harness_tools.py,Long Message Chain,1
+fast-agent/src/fast_agent/history/process_poll_fold_audit.py,Complex Method,1
+fast-agent/src/fast_agent/llm/model_database.py,Empty Catch Block,1
+fast-agent/src/fast_agent/llm/provider/bedrock/multipart_converter_bedrock.py,Long Identifier,2
+fast-agent/src/fast_agent/llm/provider/openai/huggingface_router_profiles.py,Complex Method,1
+fast-agent/src/fast_agent/llm/provider/openai/llm_openrouter.py,Long Statement,1
+fast-agent/src/fast_agent/marketplace/registry_urls.py,Long Lambda Function,1
+fast-agent/src/fast_agent/plugins/marketplace.py,Complex Conditional,1
+fast-agent/src/fast_agent/plugins/post_user_turn.py,Complex Method,1
+fast-agent/src/fast_agent/session/preview.py,Long Statement,2
+fast-agent/src/fast_agent/skills/direct_sources.py,Missing Default,1
+fast-agent/src/fast_agent/tools/environment_config.py,Magic Number,2
+fast-agent/src/fast_agent/tools/filesystem_runtime_protocol.py,Long Statement,1
+fast-agent/src/fast_agent/tools/huggingface_sandbox_environment.py,Long Lambda Function,1
+fast-agent/src/fast_agent/types/conversation_summary.py,Complex Method,1
+fast-agent/src/fast_agent/ui/elicitation_form.py,Long Message Chain,1
+fast-agent/src/fast_agent/ui/interactive_prompt.py,Long Parameter List,1
+fast-agent/src/fast_agent/ui/markdown/truncation.py,Long Parameter List,1
+fast-agent/src/fast_agent/ui/mcp_display.py,Long Method,1
+fast-agent/src/fast_agent/ui/model_picker.py,Long Method,1
+inspect_ai/src/inspect_ai/_cli/ctl/_model.py,Long Method,1
+inspect_ai/src/inspect_ai/_display/textual/widgets/vscode.py,Long Identifier,1
+inspect_ai/src/inspect_ai/_util/http.py,Empty Catch Block,3
+inspect_ai/src/inspect_ai/analysis/_dataframe/evals/extract.py,Long Statement,1
+inspect_ai/src/inspect_ai/log/_convert.py,Long Parameter List,2
+inspect_ai/src/inspect_ai/log/_recover/_buffer.py,Long Message Chain,1
+inspect_ai/src/inspect_ai/model/_openai_responses.py,Missing Default,2
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_citations.py,Complex Method,1
+inspect_ai/src/inspect_ai/model/_providers/_openai_web_search.py,Long Identifier,1
+inspect_ai/src/inspect_ai/model/_providers/sagemaker.py,Complex Conditional,1
+inspect_ai/src/inspect_ai/tool/_sandbox_tools_utils/sandbox.py,Long Method,1
+inspect_ai/src/inspect_ai/tool/_tool_with.py,Long Identifier,1
+inspect_ai/src/inspect_ai/util/_checkpoint/_snapshot/archive.py,Magic Number,1
+inspect_ai/src/inspect_sandbox_tools/src/inspect_sandbox_tools/_remote_tools/_bash_session/json_rpc_methods.py,Missing Default,1
+inspect_ai/src/inspect_tool_support/src/inspect_tool_support/_remote_tools/_web_browser/playwright_page_crawler.py,Long Message Chain,1
+parlant/scripts/version.py,Long Identifier,3
+parlant/src/parlant/adapters/nlp/snowflake_cortex_service.py,Complex Method,1
+parlant/src/parlant/core/app_modules/agents.py,Long Statement,1
+parlant/src/parlant/core/engines/alpha/engine.py,Missing Default,1
+parlant/src/parlant/core/engines/alpha/guideline_matching/custom_guideline_matching_strategy.py,Long Statement,3
+parlant/src/parlant/core/engines/alpha/guideline_matching/generic/generic_guideline_matching_strategy.py,Long Method,1
+parlant/src/parlant/core/engines/alpha/guideline_matching/generic/guideline_actionable_batch.py,Long Parameter List,2
+parlant/src/parlant/core/engines/alpha/guideline_matching/generic/journey/journey_backtrack_check.py,Complex Conditional,1
+parlant/src/parlant/core/engines/alpha/guideline_matching/generic/journey/journey_backtrack_check.py,Long Lambda Function,1
+parlant/src/parlant/core/engines/alpha/guideline_matching/generic/journey/journey_node_selection_batch.py,Empty Catch Block,1
+parlant/src/parlant/core/journey_guideline_projection.py,Long Method,1
+parlant/src/parlant/core/persistence/data_collection.py,Long Identifier,1
+parlant/src/parlant/core/persistence/document_database.py,Long Identifier,1
+parlant/src/parlant/core/services/indexing/common.py,Magic Number,1
+pennylane/pennylane/backline/runtime/operands.py,Empty Catch Block,1
+pennylane/pennylane/backline/runtime/runtime_call.py,Empty Catch Block,1
+pennylane/pennylane/concurrency/executors/base.py,Magic Number,1
+pennylane/pennylane/concurrency/executors/native/serial.py,Long Statement,3
+pennylane/pennylane/core/transforms/compile_pipeline.py,Magic Number,1
+pennylane/pennylane/devices/default_clifford.py,Long Method,1
+pennylane/pennylane/devices/legacy_facade.py,Empty Catch Block,1
+pennylane/pennylane/estimator/qpe_resources/first_quantization.py,Complex Method,3
+pennylane/pennylane/estimator/resource_operator.py,Complex Conditional,1
+pennylane/pennylane/gradients/vjp.py,Long Parameter List,1
+pennylane/pennylane/labs/__init__.py,Long Statement,1
+pennylane/pennylane/labs/tcdq/qudit_expval_functions.py,Complex Method,1
+pennylane/pennylane/labs/templates/superposition_thc.py,Long Lambda Function,1
+pennylane/pennylane/math/interface_utils.py,Missing Default,1
+pennylane/pennylane/measurements/counts.py,Long Parameter List,1
+pennylane/pennylane/measurements/shots.py,Long Statement,1
+pennylane/pennylane/ops/op_math/condition.py,Magic Number,1
+pennylane/pennylane/qchem/molecule.py,Long Parameter List,1
+pennylane/pennylane/resource/resource.py,Missing Default,1
+pennylane/pennylane/resource/specs.py,Empty Catch Block,2
+pennylane/pennylane/templates/core.py,Long Identifier,6
+pennylane/pennylane/templates/tensornetworks/mps.py,Long Identifier,1
+pennylane/pennylane/transforms/convert_to_numpy_parameters.py,Long Message Chain,1
+pennylane/pennylane/transforms/defer_measurements.py,Long Method,1
+pennylane/pennylane/transforms/optimization/merge_rotations.py,Long Method,1
+pennylane/pennylane/transforms/optimization/optimization_utils.py,Complex Conditional,1
+private-gpt/private_gpt/arq/runner.py,Magic Number,1
+private-gpt/private_gpt/arq/tasks/chat/start.py,Long Parameter List,1
+private-gpt/private_gpt/celery/tasks/ingestion/extraction_tasks.py,Long Lambda Function,1
+private-gpt/private_gpt/components/chat/processors/chat_history/memory/tldr_processor.py,Long Parameter List,1
+private-gpt/private_gpt/components/engines/chat/interceptors/ensure_tools_are_flatten_interceptor.py,Complex Method,1
+private-gpt/private_gpt/components/engines/citations/term_extractor.py,Magic Number,2
+private-gpt/private_gpt/components/environment/__init__.py,Long Statement,2
+private-gpt/private_gpt/components/llm/discovery.py,Empty Catch Block,1
+private-gpt/private_gpt/components/postprocessor/tree_expansion/split_subtrees.py,Complex Conditional,1
+private-gpt/private_gpt/components/readers/nodes/utils.py,Missing Default,1
+private-gpt/private_gpt/components/streaming/providers/redis_stream_service.py,Empty Catch Block,1
+private-gpt/private_gpt/components/streaming/providers/redis_stream_service.py,Long Identifier,3
+private-gpt/private_gpt/components/tools/processors/web_search_processor.py,Long Identifier,1
+private-gpt/private_gpt/components/web/web_scraper_service.py,Long Message Chain,2
+private-gpt/private_gpt/server/chat/interceptors/extract_citation_interceptor.py,Long Method,1
+private-gpt/private_gpt/server/chat/interceptors/runtime_model_interceptor.py,Magic Number,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/agent/abstract.py,Magic Number,2
+pydantic-ai/pydantic_ai_slim/pydantic_ai/capabilities/thread_executor.py,Long Statement,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/common_tools/web_fetch.py,Complex Method,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/common_tools/web_fetch.py,Long Identifier,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_agent.py,Complex Method,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/prefect/_operation_names.py,Missing Default,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_operation_names.py,Missing Default,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/models/fallback.py,Long Method,2
+pydantic-ai/pydantic_ai_slim/pydantic_ai/profiles/deepseek.py,Long Identifier,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/google.py,Long Message Chain,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/tool_manager.py,Long Parameter List,1
+pydantic-ai/pydantic_ai_slim/pydantic_ai/toolsets/deferred_loading.py,Long Statement,1
+pydantic-ai/pydantic_evals/pydantic_evals/_otel_emit.py,Empty Catch Block,1
+pydantic-ai/pydantic_evals/pydantic_evals/evaluators/spec.py,Long Statement,2
+pydantic-ai/pydantic_evals/pydantic_evals/otel/span_tree.py,Long Message Chain,1
+python-sdk/docs_src/lowlevel/tutorial001.py,Long Statement,2
+python-sdk/docs_src/troubleshooting/tutorial004.py,Long Statement,1
+python-sdk/src/mcp/server/auth/handlers/token.py,Missing Default,1
+python-sdk/src/mcp/server/extension.py,Long Identifier,1
+server/music_assistant/controllers/config/providers.py,Complex Conditional,1
+server/music_assistant/controllers/music/media/albums.py,Long Lambda Function,1
+server/music_assistant/controllers/player_queues/managed_pool.py,Long Lambda Function,1
+server/music_assistant/controllers/player_queues/media_resolver.py,Long Method,2
+server/music_assistant/controllers/streams/smart_fades/fades.py,Complex Method,1
+server/music_assistant/controllers/streams/smart_fades/planner/context.py,Complex Conditional,1
+server/music_assistant/controllers/webserver/controller.py,Long Lambda Function,1
+server/music_assistant/providers/_demo_plugin_provider/__init__.py,Long Statement,7
+server/music_assistant/providers/airplay/provider.py,Missing Default,1
+server/music_assistant/providers/alexa/setup_flow.py,Long Message Chain,1
+server/music_assistant/providers/apple_music/api_client.py,Long Identifier,2
+server/music_assistant/providers/ard_audiothek/__init__.py,Missing Default,1
+server/music_assistant/providers/chromecast/receiver_commands.py,Long Identifier,1
+server/music_assistant/providers/deezer/gw_client.py,Long Parameter List,1
+server/music_assistant/providers/filesystem_onedrive/constants.py,Long Statement,2
+server/music_assistant/providers/gpodder/__init__.py,Missing Default,1
+server/music_assistant/providers/lastfm_scrobble/__init__.py,Missing Default,1
+server/music_assistant/providers/milkdrop_visualizer/tap.py,Complex Conditional,1
+server/music_assistant/providers/msx_bridge/mappers.py,Long Parameter List,3
+server/music_assistant/providers/musiccast/provider.py,Empty Catch Block,1
+server/music_assistant/providers/musiccast/provider.py,Missing Default,1
+server/music_assistant/providers/musicme/helpers.py,Long Statement,1
+server/music_assistant/providers/openai_compatible/constants.py,Long Identifier,1
+server/music_assistant/providers/opensubsonic/parsers.py,Complex Method,2
+server/music_assistant/providers/opensubsonic/parsers.py,Long Parameter List,1
+server/music_assistant/providers/sendspin/playback.py,Magic Number,3
+server/music_assistant/providers/sendspin_source/provider.py,Missing Default,1
+server/music_assistant/providers/squeezelite/player.py,Complex Conditional,1
+server/music_assistant/providers/tunein/__init__.py,Complex Conditional,1
+server/music_assistant/providers/tunein/setup_flow.py,Long Message Chain,1
+server/music_assistant/providers/vban_receiver/stats.py,Long Identifier,1
+server/music_assistant/providers/yandex_ynison/protocols.py,Long Identifier,2
+server/scripts/check_manifests.py,Empty Catch Block,1

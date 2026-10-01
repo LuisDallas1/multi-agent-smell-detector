@@ -1,0 +1,12 @@
+smell,quota,cap,max_contribution,max_file
+complex method,39,10,3,pennylane/pennylane/estimator/qpe_resources/first_quantization.py
+long parameter list,36,9,3,server/music_assistant/providers/msx_bridge/mappers.py
+long method,35,9,3,Agently/agently/utils/StreamingJSONParser.py
+complex conditional,33,9,2,Cirq/cirq-core/cirq/qis/clifford_tableau.py
+empty catch block,37,10,5,bernstein/src/bernstein/core/observability/debug_bundle.py
+long identifier,55,14,8,bernstein/src/bernstein/eval/promotion.py
+long statement,72,18,10,Cirq/cirq-core/cirq/sim/sparse_simulator.py
+magic number,46,12,9,bernstein/src/bernstein/core/protocols/mcp/stateless_core.py
+missing default,31,8,2,inspect_ai/src/inspect_ai/model/_openai_responses.py
+long lambda function,31,8,4,bernstein/src/bernstein/core/admission/engine.py
+long message chain,35,9,3,bernstein/src/bernstein/core/server/dashboard_auth.py

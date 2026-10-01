@@ -1,0 +1,307 @@
+#!/usr/bin/env python3
+"""
+Documentation generation and serving utilities.
+
+Usage:
+    uv run scripts/docs.py install    # Install/sync dev dependencies
+    uv run scripts/docs.py generate   # Generate reference docs from source
+    uv run scripts/docs.py a2a        # Regenerate A2A getting-started snippets
+    uv run scripts/docs.py social [--page path.md]
+                                      # Generate committed Open Graph card PNGs
+    uv run scripts/docs.py social-contact-sheet
+                                      # Generate social card review sheet
+    uv run scripts/docs.py social-variants
+                                      # Generate CRT social card variant previews
+    uv run scripts/docs.py benchmark-social
+                                      # Render Terminal-Bench campaign storyboard
+    uv run scripts/docs.py benchmark-social --variant spotlight --high-quality
+                                      # Render Luna lossless and supersampled masters
+    uv run scripts/docs.py benchmark-social --variant grok --high-quality
+                                      # Render Grok 4.6 spotlight masters
+    uv run scripts/docs.py benchmark-social --variant grok-medium --high-quality
+                                      # Render Grok 4.6 medium spotlight masters
+    uv run scripts/docs.py benchmark-social --variant grok-share --high-quality
+                                      # Render alternative Grok social-share masters
+    uv run scripts/docs.py benchmark-social --variant grok-share-swapped --high-quality
+                                      # Render mirrored Grok social-share masters
+    uv run scripts/docs.py benchmark-social --variant deepseek --high-quality
+                                      # Render DeepSeek lossless and supersampled masters
+    uv run scripts/docs.py benchmark-social --variant pricing-convergence --high-quality
+                                      # Render pricing chart lossless and supersampled masters
+    uv run scripts/docs.py benchmark-social --variant deepseek-cache-cost --high-quality
+                                      # Render DeepSeek cache-cost chart masters
+    uv run scripts/docs.py benchmark-social --variant task-swings --high-quality
+                                      # Render Grok / Sol task-swing comparison masters
+    uv run scripts/docs.py benchmark-animation --ffmpeg /path/to/ffmpeg
+                                      # Render the 8.1s Sol repricing social animation
+    uv run scripts/docs.py assets     # Verify committed interactive docs assets
+    uv run scripts/docs.py assets-record tui-shell
+                                      # Record an interactive docs asset
+    uv run scripts/docs.py cast-build tui-shell
+                                      # Alias for assets-record
+    uv run scripts/docs.py cast-check # Verify casts and asciinema index
+    uv run scripts/docs.py serve      # Run Zensical dev server
+    uv run scripts/docs.py build      # Build static site
+    uv run scripts/docs.py screenshot # Capture local and live docs screenshots
+    uv run scripts/docs.py assess     # Run deterministic visual screenshot checks
+    uv run scripts/docs.py all        # Generate + serve
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DOCS_DIR = ROOT / "docs"
+SCREENSHOT_DIR = DOCS_DIR / "screenshots"
+
+
+def _run_docs_tool(*args: str) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(["uv", "run", *args], cwd=DOCS_DIR, check=False)
+
+
+def install() -> int:
+    """Install/sync documentation dependencies using uv."""
+    print("Syncing development dependencies...")
+    result = subprocess.run(["uv", "sync", "--group", "dev"], cwd=ROOT, check=False)
+    if result.returncode == 0:
+        print("Docs dependencies synced successfully.")
+    return result.returncode
+
+
+def generate() -> int:
+    """Generate reference documentation from fast-agent source."""
+    print("Generating reference docs...")
+    scripts = [
+        DOCS_DIR / "generate_reference_docs.py",
+        DOCS_DIR / "generate_plugin_api_docs.py",
+    ]
+    for script in scripts:
+        result = subprocess.run([sys.executable, str(script)], cwd=ROOT, check=False)
+        if result.returncode != 0:
+            return result.returncode
+    print(f"Generated docs in {DOCS_DIR / 'docs' / '_generated'}")
+    return 0
+
+
+def a2a() -> int:
+    """Regenerate A2A getting-started snippets and verify them."""
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "a2a_docs_pipeline.py"), "generate"],
+        cwd=ROOT,
+        check=False,
+    )
+    if result.returncode != 0:
+        return result.returncode
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "a2a_docs_pipeline.py"), "check"],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def social(args: list[str]) -> int:
+    """Generate per-page Open Graph card PNGs using google-chrome."""
+    print("Generating docs social cards...", flush=True)
+    result = subprocess.run(
+        [sys.executable, str(DOCS_DIR / "generate_social_cards.py"), *args],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def check_social() -> int:
+    """Verify committed Open Graph card PNGs exist for every docs page."""
+    result = subprocess.run(
+        [sys.executable, str(DOCS_DIR / "generate_social_cards.py"), "--check"],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def social_contact_sheet() -> int:
+    """Generate the social card HTML review sheet from existing PNGs."""
+    result = subprocess.run(
+        [sys.executable, str(DOCS_DIR / "generate_social_cards.py"), "--contact-sheet"],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def social_variants() -> int:
+    """Generate local HTML previews for CRT card design variants."""
+    result = subprocess.run(
+        [sys.executable, str(DOCS_DIR / "generate_social_cards.py"), "--variant-previews"],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def benchmark_social(args: list[str]) -> int:
+    """Render Terminal-Bench campaign storyboard assets."""
+    result = subprocess.run(
+        [sys.executable, str(DOCS_DIR / "generate_benchmark_social.py"), *args],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def benchmark_animation(args: list[str]) -> int:
+    """Render the Terminal-Bench Sol repricing social animation."""
+    result = subprocess.run(
+        [sys.executable, str(DOCS_DIR / "generate_benchmark_animation.py"), *args],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def assets(args: list[str]) -> int:
+    """Build or verify committed interactive documentation assets."""
+    command = args or ["build"]
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "docs_assets.py"), *command],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def assets_record(args: list[str]) -> int:
+    """Record a named interactive documentation asset."""
+    if not args:
+        args = ["tui-shell"]
+    return assets(["record", *args])
+
+
+def serve() -> int:
+    """Run Zensical development server."""
+    print(f"Starting Zensical server from {DOCS_DIR}...")
+    print("Site will be available at http://127.0.0.1:8000")
+    result = _run_docs_tool("zensical", "serve")
+    return result.returncode
+
+
+def build() -> int:
+    """Build static documentation site."""
+    print(f"Building static site from {DOCS_DIR}...")
+    result = check_social()
+    if result != 0:
+        return result
+    result = _run_docs_tool("zensical", "build", "--strict")
+    if result.returncode == 0:
+        print(f"Built site in {DOCS_DIR / 'site'}")
+    return result.returncode
+
+
+def screenshot() -> int:
+    """Capture comparison screenshots using google-chrome."""
+    SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    targets = [
+        ("live-home.png", "https://fast-agent.ai", "1440,1200"),
+        ("local-home.png", f"file://{(DOCS_DIR / 'site' / 'index.html').resolve()}", "1440,1200"),
+        (
+            "local-home-mobile.png",
+            f"file://{(DOCS_DIR / 'site' / 'index.html').resolve()}",
+            "390,900",
+        ),
+        (
+            "local-models.png",
+            f"file://{(DOCS_DIR / 'site' / 'models' / 'llm_providers' / 'index.html').resolve()}",
+            "1440,1200",
+        ),
+    ]
+    for filename, url, window_size in targets:
+        output = SCREENSHOT_DIR / filename
+        print(f"Capturing {url} -> {output}")
+        result = subprocess.run(
+            [
+                "google-chrome",
+                "--headless=new",
+                "--disable-gpu",
+                "--no-sandbox",
+                f"--window-size={window_size}",
+                f"--screenshot={output}",
+                url,
+            ],
+            cwd=ROOT,
+            check=False,
+        )
+        if result.returncode != 0:
+            return result.returncode
+    return 0
+
+
+def assess() -> int:
+    """Run deterministic visual checks for captured documentation screenshots."""
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "scripts/docs_visual_assess.py",
+            "--screenshots-dir",
+            str(SCREENSHOT_DIR),
+        ],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print(__doc__)
+        return 1
+
+    command = sys.argv[1]
+
+    if command == "install":
+        return install()
+    elif command == "generate":
+        return generate()
+    elif command == "a2a":
+        return a2a()
+    elif command == "social":
+        return social(sys.argv[2:])
+    elif command == "check-social":
+        return check_social()
+    elif command == "social-contact-sheet":
+        return social_contact_sheet()
+    elif command == "social-variants":
+        return social_variants()
+    elif command == "benchmark-social":
+        return benchmark_social(sys.argv[2:])
+    elif command == "benchmark-animation":
+        return benchmark_animation(sys.argv[2:])
+    elif command == "assets":
+        return assets(sys.argv[2:])
+    elif command == "assets-record":
+        return assets_record(sys.argv[2:])
+    elif command == "cast-build":
+        return assets_record(sys.argv[2:])
+    elif command == "cast-check":
+        return assets(sys.argv[2:])
+    elif command == "serve":
+        return serve()
+    elif command == "build":
+        return generate() or build()
+    elif command == "screenshot":
+        return build() or screenshot()
+    elif command == "assess":
+        return assess()
+    elif command == "all":
+        return generate() or serve()
+    else:
+        print(f"Unknown command: {command}")
+        print(__doc__)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
