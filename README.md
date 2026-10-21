@@ -1,327 +1,162 @@
-# Multi-Agent Code Smell Detector
+# Detector de implementation smells — versão 2.0
 
-Sistema de detecção de code smells em Python usando múltiplos agentes especializados baseados em LLM.
+Esta versão parte da implementação de Estevam, substitui o dataset e introduz avaliação por ocorrência contra o gabarito DPy. Este documento descreve o código atual e suas diferenças em relação ao original; não apresenta resultados experimentais.
 
-## 📚 Sobre o Projeto
+A base de desenvolvimento é `MeuProjeto/multi-agent-smell-detector`. `ProjetoEstevam/multi-agent-smell-detector` conserva o código original do commit `afb065c`, para consulta. Referências bibliográficas, corpus minerado e dados de origem foram preservados.
 
-Trabalho de Conclusão de Curso (TCC) que implementa um sistema multi-agente para detecção automática de 11 tipos de code smells em código Python, seguindo as definições acadêmicas de renomados autores da Engenharia de Software.
+## Arquitetura preservada
 
-### 🎯 Objetivo
+O fluxo continua sendo: arquivo Python → supervisor → 11 especialistas → respostas Pydantic → filtros e metadados → resultados. Cada especialista procura um único smell. O supervisor coordena as chamadas deterministicamente; não é uma LLM adicional que escolhe os agentes ou julga as respostas.
 
-Desenvolver um sistema baseado em LLM multi-agente capaz de detectar code smells em código Python com alta precisão, combinando análise estática e inteligência artificial.
+Continuam em uso `langchain_openai.ChatOpenAI`, `with_structured_output(schema, method="json_mode")`, schemas Pydantic e três conjuntos de prompts identificados por origem. A API FastAPI original foi preservada; o experimento e sua avaliação são executados pelo comando abaixo, não pela API.
 
-## 📊 Resultados
+Todos os 11 especialistas recebem cada arquivo selecionado, mesmo quando determinado par não participa da avaliação. O gabarito não é enviado às LLMs. Tokens abrangem todas as chamadas, não apenas os pares avaliados. Ainda não há uma implementação experimental de agente único nesta base.
 
-### Performance (Claude Sonnet 4.5)
+## Mudanças no código do Estevam
 
-| Métrica | Prompts Elaborados | Prompts Simples | DPy (Estático) |
-|---------|-------------------|-----------------|----------------|
-| **F1-Score** | **70.21%** | 67.08% | 48.59% |
-| Precision | 67.36% | 57.19% | 39.22% |
-| Recall | 73.30% | 81.11% | 63.98% |
-| True Positives | 291 | 322 | 254 |
+| Arquivo ou área | Mudança |
+| --- | --- |
+| `src/core/supervisor/supervisor.py` | Modelo, tokens, temperatura, timeout, retries, concorrência, reasoning e provedor passaram a ser parâmetros. Um semáforo limita especialistas simultâneos. Erros e tokens são registrados por agente. Autenticação inválida interrompe a rodada; truncamento descarta a resposta incompleta e é registrado como falha. |
+| `src/core/schemas/agent_response.py` | Thresholds usam tabela comum. Complex conditional passou de 3 no schema para 2; Long statement passou de 120 para 80. Magic number ganhou `number` opcional. Estrutura Pydantic e campos opcionais originais foram preservados. |
+| `src/core/smell_rules.py` | Novo módulo de thresholds fixos e exceções numéricas. O modelo não pode redefinir o limiar aplicado pelos filtros. |
+| `src/core/utils/detection_validator.py` | Filtros alinhados aos thresholds; Magic number exclui somente 0, 1 e -1; identificadores dunder não são descartados apenas por serem dunder; acrescentado filtro de comprimento de Long method. Permanecem fallbacks originais que aceitam algumas respostas sem medida verificável. |
+| `src/core/prompts/` | Três subpastas: `simple_estevam`, `complete_estevam` e `complete_v2`, com 11 prompts em cada. Os dois primeiros preservam o original com thresholds atualizados; o terceiro contém as revisões descritas abaixo. |
+| `src/core/supervisor/agent_config.py` | Seleciona explicitamente um dos três conjuntos, mantendo os mesmos especialistas e schemas. Conjuntos desconhecidos geram erro. |
+| `scripts/run_experiment.py` | Único comando principal, instancia diretamente o supervisor e seleciona arquivos. Substitui os quatro comandos redundantes de execução. Não há outro transporte ou detector intermediário. |
+| `scripts/experiment_evaluation.py` | Correspondência um a um entre previsões e ocorrências DPy, com regras por smell. |
+| `scripts/evaluate_results.py` | Congela o gabarito e calcula métricas automaticamente ou offline. Normaliza somente campos declarados pelo modelo. |
+| `scripts/sample_dataset.py` | Prepara a amostra a partir do corpus e das saídas DPy, incluindo seleção de pares positivos por smell. Não é executado durante a detecção. |
 
-### Research Questions
+Normalizar campos significa, por exemplo, usar `start_line` quando falta a linha de um método ou extrair o valor numérico da descrição da própria previsão. O avaliador não usa o gabarito para completar uma previsão. Não há adaptador de outra arquitetura nesta execução.
 
-- **RQ1:** O sistema atinge F1-Score de 70.21% na detecção de code smells
-- **RQ2:** Prompts elaborados superam simples em +3.1pp (diferença estatisticamente significativa, p < 0.05)
-- **RQ3:** Multi-agentes supera DPy em +21.6pp no F1-Score
-- **RQ4:** 10 de 11 agentes atingem F1 > 50%
-- **RQ5:** Custo total de $5.79 (~$0.02 por True Positive)
+Padrões: 8.192 tokens de saída por chamada, temperatura 0, timeout de 120 segundos, dois especialistas simultâneos e zero retries adicionais. `--reasoning default` omite o parâmetro; não significa raciocínio desativado. `--provider` permite fixar o provedor sem fallback.
 
-## 🏗️ Arquitetura do Sistema
+## Novo dataset
 
-### Visão Geral
+A amostra fornecida contém 182 arquivos, 312 pares positivos `(arquivo, smell)`, 450 ocorrências positivas e 291 pares negativos. O manifesto tem 603 pares. O balanceamento é dos pares selecionados, não de todos os smells existentes nos arquivos.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        API FastAPI                               │
-│                    (POST /api/analyze)                           │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   CodeSmellSupervisor                            │
-│  • Coordena 11 agentes (paralelo ou sequencial)                 │
-│  • Usa LLM (DeepSeek/GPT-4o-mini) com structured output         │
-│  • Enriquece detecções com metadados (AST)                      │
-│  • Filtra falsos positivos                                       │
-│  • Limites: 500 linhas, 50KB por arquivo                        │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-        ▼                    ▼                    ▼
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ Complexidade │    │  Estrutura   │    │ Nomenclatura │
-├──────────────┤    ├──────────────┤    ├──────────────┤
-│ Long Method  │    │ Long Param   │    │ Long ID      │
-│ Complex Meth │    │ Message Chain│    │ Magic Number │
-│ Complex Cond │    └──────────────┘    └──────────────┘
-└──────────────┘             │
-                             ▼
-                    ┌──────────────┐
-                    │  Statements  │
-                    ├──────────────┤
-                    │ Long Stmt    │
-                    │ Empty Catch  │
-                    │ Missing Def  │
-                    │ Long Lambda  │
-                    └──────────────┘
-```
+| Local | Finalidade |
+| --- | --- |
+| `dataset/` | Arquivos disponíveis ao experimento. |
+| `dataset/ground_truth/sample_pairs.csv` | Pares positivos selecionados. |
+| `dataset/ground_truth/evaluation_pairs.csv` | Pares positivos e negativos avaliados, com contagens. |
+| `dataset/ground_truth/dpy_implementation_smells_sample.csv` | Ocorrências dos pares selecionados, com localização e descrição. |
+| `dataset/ground_truth/evaluation_manifest.json` | Metadados e política de seleção dos pares. |
+| `dataset/sample_*.csv` e `dataset/sample_config.json` | Estatísticas e proveniência da amostragem. |
+| `dataset_full/` | Corpus minerado; não é o dataset padrão da execução. |
+| `results/dpy/` | Saídas brutas DPy que deram origem ao gabarito; não são resultados desta versão. |
 
-### Fluxo de Execução
+Um arquivo pode ter ocorrências fora de seus pares selecionados. Os 603 pares, portanto, não representam os 182 × 11 pares possíveis. Caminhos relativos completos identificam arquivos; módulos homônimos de projetos diferentes não são combinados.
 
-1. **Request** → API recebe código Python
-2. **Validação** → Verifica tamanho (max 500 linhas, 50KB)
-3. **Supervisor** → Coordena execução dos 11 agentes
-4. **LLM** → Cada agente chama LLM com structured output (prompt + schema)
-5. **Enrichment** → Adiciona metadados (Project, Package, Module, Line)
-6. **Validação** → Filtra falsos positivos (ex: Long Identifier ≤ 20 chars)
-7. **Response** → Retorna JSON com detecções
+O código original incluía análises em notebooks por presença e contagem agregada. A métrica principal desta versão compara ocorrências localizadas contra o DPy.
 
-### ⚙️ Configurações
+## Conjuntos de prompts
 
-- **Modelo**: Claude Sonnet 4.5 / DeepSeek V3.2 / GPT-4o-mini (via OpenRouter)
-- **Temperatura**: 0 (determinístico)
-- **Modo**: Paralelo (11 requests simultâneos) ou Sequencial (delay 0.3s)
-- **Limites**: 500 linhas, 50KB por arquivo
-- **Validação**: Filtra falsos positivos automaticamente
-- **Prompts**: Elaborados (com exemplos e regras) ou Simples (definição básica)
+| Nome de execução | Pasta | Conteúdo |
+| --- | --- | --- |
+| `simple_estevam` | `src/core/prompts/simple_estevam/` | Simple original, alterando somente Long statement de 120 para 80. |
+| `complete_estevam` | `src/core/prompts/complete_estevam/` | Complete original, alterando somente Long statement de 120 para 80. |
+| `complete_v2` | `src/core/prompts/complete_v2/` | Complete revisado desta versão, preservado integralmente. |
 
-## 🤖 Code Smells Detectados
+Cada conjunto tem 11 especialistas. Os originais preservam exemplos, formato, teto de detecções e exclusões semânticas; não recebem as outras correções do V2. Schemas, filtros do supervisor e avaliação são compartilhados. As diferenças de definição além dos thresholds continuam presentes e fazem parte da comparação.
 
-### Tabela de Thresholds
+O padrão do comando experimental é `complete_v2`. `--prompt-type all` executa os três conjuntos nos mesmos arquivos. Resultados e cópias dos prompts são separados pelo nome do conjunto. A API e as funções auxiliares do supervisor usam `simple_estevam` por padrão.
 
-| # | Code Smell | Categoria | Threshold | Descrição |
-|---|------------|-----------|-----------|----------|
-| 1 | **Long Method** | Complexidade | > 67 linhas | Métodos com mais de 67 linhas |
-| 2 | **Complex Method** | Complexidade | CC > 7 | Complexidade Ciclomática maior que 7 |
-| 3 | **Complex Conditional** | Complexidade | > 2 operadores | Mais de 2 operadores lógicos (and/or) |
-| 4 | **Long Parameter List** | Estrutura | > 4 parâmetros | Funções com mais de 4 parâmetros |
-| 5 | **Long Message Chain** | Estrutura | > 2 métodos | Mais de 2 métodos encadeados |
-| 6 | **Long Statement** | Statements | > 120 caracteres | Linhas com mais de 120 caracteres |
-| 7 | **Long Identifier** | Nomenclatura | > 20 caracteres | Identificadores com mais de 20 caracteres |
-| 8 | **Magic Number** | Nomenclatura | Literais (exceto 0,1,-1) | Números literais sem constante nomeada |
-| 9 | **Empty Catch Block** | Statements | Bloco vazio | Blocos except vazios ou apenas com pass |
-| 10 | **Missing Default** | Statements | Sem case _ | match-case sem caso padrão |
-| 11 | **Long Lambda** | Statements | > 80 caracteres | Lambdas com mais de 80 caracteres |
+## Mudanças no complete V2
 
-### Referências Bibliográficas
+A tabela abaixo descreve somente `complete_v2`. Ela não se aplica aos dois conjuntos preservados de Estevam. As definições de referência estão em `smells.md`.
 
-| Code Smell | Referência | Localização |
-|------------|------------|-------------|
-| Long Method | Fowler (1999) | Cap. 3, p. 76 |
-| Complex Method | McCabe (1976) | IEEE Trans. SE, p. 308 |
-| Complex Conditional | Fowler (2018) | Cap. 10, p. 260 |
-| Long Parameter List | Fowler (1999) | Cap. 3, p. 78 |
-| Long Message Chain | Fowler (1999) | Cap. 3, p. 84 |
-| Long Statement | PEP 8 | Seção "Maximum Line Length" |
-| Long Identifier | Martin (2008) | Cap. 2, p. 18-25 |
-| Magic Number | Fowler (1999) + Martin (2008) | Cap. 3, p. 219 / Cap. 17 |
-| Empty Catch Block | Martin (2008) | Cap. 7, p. 106 |
-| Missing Default | CWE-478 (MITRE) | Common Weakness Enumeration |
-| Long Lambda | Chen et al. (2016) | SATE Conference, p. 18 |
+| Smell | Critério e alteração relevante |
+| --- | --- |
+| Long lambda function | Mais de 80 caracteres; exemplos de comprimento coerente. |
+| Long statement | Mais de 80 caracteres, substituindo 120. O prompt atual considera a instrução completa, inclusive multilinha e strings de dados, e pede a linha inicial. |
+| Long method | Mais de 67 linhas; identifica a própria função, com `Line_no` e `start_line` na linha de `def`/`async def`. |
+| Long parameter list | Mais de 4 parâmetros. Mantidas as exclusões originais de `self`, `cls`, `*args` e `**kwargs`. |
+| Long identifier | Mais de 20 caracteres; resposta pede `identifier_name` e comprimento. |
+| Complex method | Complexidade ciclomática de McCabe maior que 7; localização na definição da função. |
+| Complex conditional | Mais de 2 operadores `and`/`or` na mesma condição; schema e contrato coerentes com esse limite. |
+| Long message chain | Mais de 2 elementos no acesso a atributos de dados, contando base e atributos. O original contava métodos com parênteses e excluía atributos. Agora distingue nomes invocados de atributos de dados, interrompe a sequência em chamadas/indexações, procura em argumentos e alvos de atribuição e evita duplicar prefixos. O complete apresenta positivos e negativos em igual quantidade. Essa interpretação foi inferida das saídas DPy disponíveis, não certificada pelo código-fonte do detector. |
+| Empty catch block | `except` com somente `pass` ou uma única instrução `return`, com ou sem valor. Outros comandos impedem a classificação. |
+| Missing default | `match` sem `case _`. |
+| Magic number | Literal sem constante nomeada, exceto 0, 1 e -1. Retiradas exclusões gerais do original para testes, índices, contadores, 2/10/100 e contextos matemáticos. Resposta inclui `number`. |
 
-### Detalhamento por Categoria
+Foi removido o teto artificial de dez detecções. Os prompts pedem todas as ocorrências qualificadas, o que pode aumentar tokens e truncamentos. Foram explicitados `detected`, `detections`, `Smell`, `Method`, `Line_no`, `Description` e as medidas do schema. A numeração fornecida com o código serve somente para localização.
 
-#### 🔴 Complexidade (3 smells)
-- **Long Method**: Métodos muito longos são difíceis de entender e manter
-- **Complex Method**: Alta complexidade ciclomática indica muitos caminhos de execução
-- **Complex Conditional**: Condicionais com muitos operadores lógicos são difíceis de ler
+As medidas continuam propostas pela LLM e filtradas pelo código existente; não foi introduzido um detector estático completo para substituir as respostas. Contagem de linhas de funções, instruções, Magic number e Long message chain ainda exigem validação metodológica contra o DPy antes de conclusões do experimento.
 
-#### 🔵 Estrutura (2 smells)
-- **Long Parameter List**: Muitos parâmetros indicam responsabilidades excessivas
-- **Long Message Chain**: Encadeamento excessivo viola Lei de Demeter
+## Avaliação
 
-#### 🟢 Nomenclatura (2 smells)
-- **Long Identifier**: Nomes muito longos prejudicam legibilidade
-- **Magic Number**: Literais numéricos sem significado explícito
+A métrica principal é micro-F1 por ocorrência nos pares do manifesto:
 
-#### 🟡 Statements (4 smells)
-- **Long Statement**: Linhas muito longas dificultam leitura
-- **Empty Catch Block**: Exceções silenciadas escondem erros
-- **Missing Default**: Switch/match sem caso padrão pode causar bugs
-- **Long Lambda Function**: Lambdas complexas devem ser funções nomeadas
+`Precisão = TP / (TP + FP)`
 
-## 🚀 Instalação e Uso
+`Recall = TP / (TP + FN)`
 
-### Pré-requisitos
+`F1 = 2 × TP / (2 × TP + FP + FN)`
 
-- Python 3.12+
-- uv ou Poetry
-- Chave API da OpenAI (GPT-4o-mini) via OpenRouter
+- TP: previsão corresponde a uma ocorrência ainda não utilizada do gabarito.
+- FP: previsão sem correspondência em um par avaliado, inclusive se o par é negativo.
+- FN: ocorrência do gabarito sem previsão correspondente.
+- Fora do escopo: previsão em par não selecionado; não entra como TP nem FP.
 
-### Instalação
+A correspondência é um a um. Previsões duplicadas não criam TPs adicionais. Além do mesmo arquivo e smell, o avaliador usa:
 
-```bash
-git clone <url-do-repositorio>
-cd multi-agent-smell-detector
-uv sync
+- Métodos: linha da definição e nome da função.
+- Identificadores: nome e função envolvente; fora de função, nome e linha. Isso acomoda registros DPy ancorados na função.
+- Empty catch block e Missing default: bloco localizado por AST. Se o gabarito indica apenas a linha da função, associa um bloco qualificante daquela função, respeitando a resolução do gabarito.
+- Magic number: linha e valor numérico.
+- Demais tipos: linha inicial registrada.
+
+Macro-F1 considera os tipos com positivos ou erros e informa quantos entraram na média. Tipos só negativos e perfeitamente classificados não recebem F1 artificial de 1. Presença e contagem são diagnósticos complementares.
+
+Falhas técnicas são registradas separadamente. No F1 operacional, o par continua avaliado quando o agente falha; ocorrências não encontradas permanecem FN. São avaliadas as detecções após os filtros do supervisor; itens descartados antes da gravação não são recuperados.
+
+Avaliar todos os smells de todos os arquivos exige outro manifesto e gabarito completo. Não basta ampliar os pares usando o CSV amostrado, pois ele omite ocorrências fora da seleção. Uma avaliação completa deve ser identificada separadamente.
+
+## Como executar
+
+Use a raiz deste projeto, com as dependências de `pyproject.toml` instaladas. O script de amostragem também requer NumPy e pandas. Configure credenciais localmente ou por variáveis de ambiente; elas não são gravadas nos resultados.
+
+Conferir seleção, tarefas e gabarito sem carregar credenciais ou chamar LLMs:
+
+```powershell
+python scripts/run_experiment.py --model gpt-6-luna --max-files 5 --prompt-type complete_v2 --dry-run
 ```
 
-### Configuração
+Executar uma seleção limitada:
 
-Crie um arquivo `.env` na raiz:
-
-```env
-OPENROUTER_API_KEY=sua_chave_api_aqui
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_API_MODEL=openai/gpt-4o-mini
+```powershell
+python scripts/run_experiment.py --model gpt-6-luna --max-files 5 --seed 1 --prompt-type complete_v2
 ```
 
-### Executando a API
+Executar três modelos na mesma seleção:
 
-```bash
-python src/app.py
+```powershell
+python scripts/run_experiment.py --models gpt-6-luna deepseek-v4.1-flash gemini-3.5-flash-lite --max-files 20 --seed 1 --prompt-type complete_v2
 ```
 
-A API estará disponível em `http://localhost:8000`
+Os apelidos são mapeamentos locais de IDs, não garantia de disponibilidade futura. Também é aceito `--model provedor/modelo`. O padrão é até cinco arquivos; `--all-files` seleciona todos os elegíveis. Limites padrão são 3.000 linhas e 500 KB; arquivos excluídos não entram na rodada. A lista efetiva e seus hashes ficam salvos.
 
-Documentação interativa: `http://localhost:8000/docs`
+Use `--files-from results/experiments/IDENTIFICADOR/sample.json --all-files` para repetir uma seleção verificando hashes. `--prompt-type all` executa os três conjuntos nos mesmos arquivos. Tarefas planejadas = arquivos × modelos × conjuntos de prompts × 11, sem retries.
 
-## 📡 Uso da API
+Outras opções: `--dataset`, `--env-file`, `--max-tokens`, `--concurrency`, `--sequential`, `--timeout`, `--max-retries`, `--temperature`, `--reasoning`, `--provider`, `--output-dir`, `--evaluation-pairs`, `--ground-truth` e `--no-evaluate`. Consulte `--help`.
 
-### Endpoint: POST /api/analyze
+O F1 é automático quando manifesto e gabarito estão disponíveis. Para recalcular offline:
 
-**Request:**
-```json
-{
-  "python_code": "def long_function_name_that_exceeds_twenty_chars():\n    pass",
-  "file_path": "example.py",
-  "project_name": "MyProject"
-}
+```powershell
+python scripts/evaluate_results.py --run results/experiments/IDENTIFICADOR
 ```
 
-**Response:**
-```json
-{
-  "total_smells_detected": 1,
-  "agents_executed": 11,
-  "code_smells": [
-    {
-      "Project": "MyProject",
-      "Package": "example",
-      "Module": "example",
-      "Class": "",
-      "Smell": "Long identifier",
-      "Method": "long_function_name_that_exceeds_twenty_chars",
-      "Line no": "1",
-      "File": "example.py",
-      "Description": "Identifier 'long_function_name_that_exceeds_twenty_chars' has 45 characters (threshold: 20). Consider shortening.",
-      "identifier_name": "long_function_name_that_exceeds_twenty_chars",
-      "length": 45,
-      "threshold": 20
-    }
-  ]
-}
-```
+Antes das chamadas são salvos seleção, configuração, prompts, hashes de código e cópias dos pares e ocorrências do gabarito. Depois são salvos detecções, tokens, tempos, falhas e métricas. `raw.jsonl` contém resultados por arquivo do supervisor, não o texto bruto das respostas da LLM. O custo em dólares permanece não preenchido; tokens não são convertidos com preços presumidos.
 
-## 📊 Análise em Batch
+## Organização
 
-```bash
-# Executa análise com prompts elaborados
-python scripts/run_complete_only.py
+Esta base mantém `src/`, quatro scripts (execução, duas partes da avaliação e amostragem), dataset, corpus minerado, dados DPy, configuração, dependências e `tests/`. Os testes verificam avaliação, seleção, thresholds e preservação de LangChain/Pydantic. São ferramentas de desenvolvimento; o experimento não depende deles.
 
-# Executa análise com prompts simples
-python scripts/run_simple_only.py
+Documentação complementar:
 
-# Converte resultados JSON para CSV
-python scripts/convert_results_to_csv.py
+- [Definições e thresholds dos smells](smells.md).
+- [Mudanças de cada prompt em relação ao Estevam](MUDANCAS_PROMPTS.md).
+- [Mudanças dos demais arquivos em relação ao Estevam](MUDANCAS_PROJETO.md).
 
-# Gera figuras acadêmicas
-python scripts/generate_academic_figures.py
-```
-
-## 📊 Estrutura do Projeto
-
-```
-multi-agent-smell-detector/
-├── src/
-│   ├── api/                    # API FastAPI
-│   │   ├── app.py              # Aplicação principal
-│   │   ├── routes/             # Endpoints
-│   │   └── models/             # Request/Response
-│   │
-│   ├── core/
-│   │   ├── supervisor/         # Coordenador
-│   │   │   ├── supervisor.py   # Lógica principal
-│   │   │   ├── agent_config.py # Config dos 11 agentes
-│   │   │   └── enricher.py     # Enriquecimento + validação
-│   │   │
-│   │   ├── prompts/            # 11 prompts especializados
-│   │   ├── schemas/            # Schemas Pydantic
-│   │   └── utils/              # Parser AST + Validator
-│   │
-│   └── config/                 # Configurações
-│
-├── scripts/
-│   ├── run_complete_only.py    # Executa com prompts elaborados
-│   ├── run_simple_only.py      # Executa com prompts simples
-│   ├── convert_results_to_csv.py
-│   └── generate_academic_figures.py  # Gera figuras para TCC
-│
-├── notebooks/
-│   └── research_questions_analysis.ipynb  # Análise das RQs
-│
-├── dataset/
-│   └── ground_truth/           # Ground truth para validação
-│
-├── results/
-│   ├── csv/                    # Resultados em CSV
-│   ├── json/                   # Resultados em JSON
-│   ├── dpy/                    # Resultados DPy
-│   └── figures/                # Figuras acadêmicas (PDF/PNG)
-│
-├── .env                        # Variáveis de ambiente
-└── pyproject.toml              # Dependências
-```
-
-## 🛠️ Tecnologias
-
-- **FastAPI**: API REST
-- **LangChain**: Integração com LLMs
-- **Claude Sonnet 4.5 / DeepSeek V3.2 / GPT-4o-mini**: Modelos LLM via OpenRouter
-- **Pydantic**: Validação e structured output
-- **Python AST**: Parser de código
-- **Matplotlib/Seaborn**: Visualização de dados
-- **Pandas/NumPy/SciPy**: Análise estatística
-- **Python 3.12+**: Linguagem base
-
-## 📈 Figuras Acadêmicas
-
-O projeto gera 7 figuras acadêmicas para o TCC (PDF e PNG):
-
-| Figura | Descrição |
-|--------|-----------|
-| `fig1_comparison_metrics` | Comparação de Precision, Recall, F1 entre abordagens |
-| `fig2_prompt_impact` | Impacto da qualidade dos prompts no F1-Score |
-| `fig3_f1_by_smell` | F1-Score por tipo de code smell |
-| `fig4_smell_distribution` | Distribuição de smells no Ground Truth |
-| `fig5_confusion_matrix` | Matriz de confusão (TP, FP, FN) |
-| `fig6_cost_analysis` | Análise de custos (prompts elaborados vs simples) |
-| `fig7_tp_fp_fn` | Comparação de TP, FP, FN entre abordagens |
-
-Para gerar as figuras:
-```bash
-python scripts/generate_academic_figures.py
-```
-
-## 📖 Referências Bibliográficas
-
-1. **Fowler, M.** (1999). *Refactoring: Improving the Design of Existing Code*. Addison-Wesley Professional. ISBN: 0-201-48567-2
-2. **Fowler, M.** (2018). *Refactoring: Improving the Design of Existing Code* (2nd Edition). Addison-Wesley Professional. ISBN: 978-0134757599
-3. **Martin, R. C.** (2008). *Clean Code: A Handbook of Agile Software Craftsmanship*. Prentice Hall. ISBN: 978-0132350884
-4. **McCabe, T. J.** (1976). "A Complexity Measure". *IEEE Transactions on Software Engineering*, Vol. SE-2, No. 4, pp. 308-320. DOI: 10.1109/TSE.1976.233837
-5. **Van Rossum, G., Warsaw, B., & Coghlan, N.** (2001). *PEP 8 – Style Guide for Python Code*. Python Enhancement Proposals. https://peps.python.org/pep-0008/
-6. **Chen, Z., Chen, L., Ma, W., & Zhou, B.** (2016). "Detecting Code Smells in Python Programs". *International Conference on Software Analysis, Testing and Evolution (SATE)*, pp. 18-23. DOI: 10.1109/SATE.2016.10
-7. **MITRE Corporation.** (2006). *CWE-478: Missing Default Case in Multiple Condition Expression*. Common Weakness Enumeration. https://cwe.mitre.org/data/definitions/478.html
-
-## 👨💻 Autor
-
-**Estevam** - Trabalho de Conclusão de Curso (TCC)  
-Engenharia de Software - 2025
-
-## 📄 Licença
-
-Este projeto é parte de um Trabalho de Conclusão de Curso (TCC) acadêmico.
+Novas rodadas são gravadas em `results/experiments/`. Análises e resultados do projeto original não integram a implementação da versão 2.0.

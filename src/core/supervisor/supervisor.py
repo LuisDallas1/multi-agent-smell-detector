@@ -21,16 +21,32 @@ class CodeSmellSupervisor:
     MAX_FILE_LINES = 3000
     MAX_FILE_SIZE_KB = 500
 
-    def __init__(self, parallel: bool = True, prompt_type: str = "simple"):
+    def __init__(self, parallel: bool = True, prompt_type: str = "simple_estevam", *,
+                 model_name: str | None = None, max_tokens: int = 8192,
+                 temperature: float = 0, timeout: float = 120,
+                 max_retries: int = 0, concurrency: int = 2,
+                 reasoning: str | None = None, provider: str | None = None):
         self.parallel = parallel
         self.prompt_type = prompt_type
         self.agent_configs = get_agent_configs(prompt_type)
+        self.agent_errors = {}
+        self.agent_metrics = {}
+        self.fatal_agent_error = None
+        self._agent_semaphore = asyncio.Semaphore(concurrency)
+        extra = {}
+        if reasoning is not None:
+            extra["reasoning"] = ({"enabled": False} if reasoning == "off" else {"effort": reasoning})
+        if provider:
+            extra["provider"] = {"order": [provider], "allow_fallbacks": False}
         self.model = ChatOpenAI(
-            model=settings.OPENROUTER_API_MODEL,
+            model=model_name or settings.OPENROUTER_API_MODEL,
             api_key=settings.OPENROUTER_API_KEY,
             base_url=settings.OPENROUTER_BASE_URL,
-            temperature=0,
-            max_tokens=4096,  # Limite de tokens de resposta
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+            max_retries=max_retries,
+            extra_body=extra,
         )
 
     def _validate_code_size(self, code: str) -> tuple[bool, str]:
@@ -197,14 +213,29 @@ class CodeSmellSupervisor:
         except (json.JSONDecodeError, ValueError, TypeError):
             return []
 
-    async def _call_agent(
+    async def _call_agent(self, agent_name, config, code):
+        async with self._agent_semaphore:
+            if self.fatal_agent_error:
+                self.agent_errors[agent_name] = "SkippedAfterAuthenticationFailure"
+                return [], self._create_empty_token_usage()
+            detections, usage = await self._call_agent_inner(agent_name, config, code)
+            if self.agent_errors.get(agent_name) in {"AuthenticationError", "PermissionDeniedError"}:
+                self.fatal_agent_error = self.agent_errors[agent_name]
+        self.agent_metrics[agent_name] = {
+            "detections_before_metadata": len(detections),
+            "token_usage": usage,
+            "error": self.agent_errors.get(agent_name),
+        }
+        return detections, usage
+
+    async def _call_agent_inner(
         self, agent_name: str, config: Dict, code: str
     ) -> tuple[List[Any], Dict[str, int]]:
         """Executa um agente individual. Retorna (detections, token_usage)."""
         token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
+        token_callback = TokenUsageCallback()
         try:
-            token_callback = TokenUsageCallback()
             structured_model = self.model.with_structured_output(
                 config["schema"], method="json_mode"
             )
@@ -250,7 +281,8 @@ class CodeSmellSupervisor:
                     logger.info("[%s] Recuperado %s detecções de resposta em array", agent_name, len(detections))
                     return detections, token_usage
             logger.error("[%s] Erro de validação/atributo: %s", agent_name, e)
-            return [], token_usage
+            self.agent_errors[agent_name] = type(e).__name__
+            return [], token_callback.token_usage
         except LangChainException as e:
             error_msg = str(e)
             # Tentar extrair detecções se o LLM retornou array diretamente
@@ -268,21 +300,24 @@ class CodeSmellSupervisor:
                 )
             else:
                 logger.error("[%s] Erro do LangChain: %s", agent_name, e)
-            return [], token_usage
+            self.agent_errors[agent_name] = type(e).__name__
+            return [], token_callback.token_usage
         except Exception as e:  # pylint: disable=broad-except
             error_msg = str(e)
             # Tratar especificamente erro de limite de tokens
             if "length limit was reached" in error_msg or "LengthFinishReasonError" in error_msg:
                 logger.warning(
-                    "[%s] Limite de tokens de resposta atingido (4096). "
-                    "Arquivo muito grande ou muitas detecções. Retornando detecções parciais.",
+                    "[%s] Limite configurado de tokens de resposta atingido. "
+                    "Resposta incompleta descartada e registrada como falha.",
                     agent_name,
                 )
                 # Tentar extrair detecções parciais se possível
                 # Por enquanto, retornar vazio para evitar dados incompletos
-                return [], token_usage
-            logger.error("[%s] Erro inesperado: %s", agent_name, e, exc_info=True)
-            return [], token_usage
+                self.agent_errors[agent_name] = type(e).__name__
+                return [], token_callback.token_usage
+            logger.error("[%s] Erro inesperado: %s", agent_name, type(e).__name__)
+            self.agent_errors[agent_name] = type(e).__name__
+            return [], token_callback.token_usage
 
     def _create_empty_token_usage(self) -> Dict[str, int]:
         """Cria dicionário vazio para uso de tokens."""
@@ -314,6 +349,7 @@ class CodeSmellSupervisor:
         for (name, _), result in zip(self.agent_configs.items(), results):
             if isinstance(result, Exception):
                 logger.error("[%s] Falhou: %s", name, result)
+                self.agent_errors[name] = type(result).__name__
                 continue
 
             detections, token_usage = result
@@ -348,6 +384,9 @@ class CodeSmellSupervisor:
         project_name: str = "Code",
     ) -> Dict[str, Any]:
         """Analisa código e retorna code smells detectados."""
+        self.agent_errors = {}
+        self.agent_metrics = {}
+        self.fatal_agent_error = None
         valid, error = self._validate_code_size(python_code)
         if not valid:
             logger.warning("Arquivo rejeitado: %s", error)
@@ -375,12 +414,15 @@ class CodeSmellSupervisor:
             "total_smells_detected": len(results),
             "code_smells": results,
             "agents_executed": len(self.agent_configs),
+            "agent_errors": dict(self.agent_errors),
+            "agent_metrics": dict(self.agent_metrics),
+            "fatal_error": self.fatal_agent_error,
             "token_usage": token_usage,
         }
 
 
 def get_supervisor(
-    parallel: bool = True, prompt_type: str = "simple"
+    parallel: bool = True, prompt_type: str = "simple_estevam"
 ) -> CodeSmellSupervisor:
     """Factory para criar supervisor."""
     return CodeSmellSupervisor(parallel=parallel, prompt_type=prompt_type)
@@ -391,7 +433,7 @@ async def analyze_code(
     file_path: str = "unknown.py",
     project_name: str = "Code",
     parallel: bool = True,
-    prompt_type: str = "simple",
+    prompt_type: str = "simple_estevam",
 ) -> Dict[str, Any]:
     """Analisa código Python e retorna code smells.
 
@@ -400,7 +442,7 @@ async def analyze_code(
         file_path: Caminho do arquivo
         project_name: Nome do projeto
         parallel: Se True, executa agentes em paralelo
-        prompt_type: "simple" ou "complete" - tipo de prompt a usar
+        prompt_type: "simple_estevam", "complete_estevam" ou "complete_v2"
     """
     return await get_supervisor(
         parallel=parallel, prompt_type=prompt_type

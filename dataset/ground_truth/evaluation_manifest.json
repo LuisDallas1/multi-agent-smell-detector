@@ -1,0 +1,90 @@
+{
+  "seed": 11,
+  "files": 182,
+  "positive_cells": 312,
+  "negative_cells": 291,
+  "positive_occurrences": 450,
+  "negative_requested": {
+    "complex conditional": 29,
+    "complex method": 34,
+    "empty catch block": 27,
+    "long identifier": 28,
+    "long lambda function": 27,
+    "long message chain": 26,
+    "long method": 35,
+    "long parameter list": 30,
+    "long statement": 24,
+    "magic number": 25,
+    "missing default": 27
+  },
+  "negative_obtained": {
+    "complex conditional": 29,
+    "complex method": 34,
+    "empty catch block": 27,
+    "long identifier": 28,
+    "long lambda function": 27,
+    "long message chain": 26,
+    "long method": 35,
+    "long parameter list": 30,
+    "long statement": 3,
+    "magic number": 25,
+    "missing default": 27
+  },
+  "dpy_outputs": [
+    {
+      "file": "Agently_implementation_smells.json",
+      "sha256": "94dbcaa3fab3810c0b777b874572084406649b07aa1d41de52e7f9a53acea5b5"
+    },
+    {
+      "file": "bernstein_implementation_smells.json",
+      "sha256": "d65a3c50f3f15944ee94367287ed1158d35e51c2df814b897108721b5d899b2c"
+    },
+    {
+      "file": "Cirq_implementation_smells.json",
+      "sha256": "59dccc90a57173d98920bacbdf10723100f9dd823abe12cd7a599cb1bbd445d6"
+    },
+    {
+      "file": "dynamiq_implementation_smells.json",
+      "sha256": "2fdda355e19bb1e55dfc2e9e7697aa7fac38d60a2543eb5117105af38faf1ea6"
+    },
+    {
+      "file": "EvoScientist_implementation_smells.json",
+      "sha256": "2c86010a14861d91aa2f305635fef34cf54e75c2e678f67eb41ff79adfc66036"
+    },
+    {
+      "file": "fast-agent_implementation_smells.json",
+      "sha256": "5385e0b02c1d6710f867d7b3c4096e267f89d436150b61abb0b9d94fb44eaa3f"
+    },
+    {
+      "file": "inspect_ai_implementation_smells.json",
+      "sha256": "41b6ea7a48a4d3ca6541ca8699fb8e9c4f175b98a32847be124a2a4749c22443"
+    },
+    {
+      "file": "parlant_implementation_smells.json",
+      "sha256": "d128d75d30a7a02a7f81e7bb5f6871cbb34a849a8af7687c0ee2084f423b2784"
+    },
+    {
+      "file": "pennylane_implementation_smells.json",
+      "sha256": "ecfd1359d2c011a5bd90ea3ce9e90faa36876dde8745024cedabf098e64342e6"
+    },
+    {
+      "file": "private-gpt_implementation_smells.json",
+      "sha256": "d04b09c95b05e931cf94ef74d97e6ca2467d0030de9d7ea324189b7da5468688"
+    },
+    {
+      "file": "pydantic-ai_implementation_smells.json",
+      "sha256": "3386c563ecf261b79d151e356836491283eb52bbde04a88c9537e2b9ec495805"
+    },
+    {
+      "file": "python-sdk_implementation_smells.json",
+      "sha256": "74e4ed476c2984e72fba693c3550147c0d93dec9ed6f83a79a4be07147743496"
+    },
+    {
+      "file": "server_implementation_smells.json",
+      "sha256": "041c463bb6a4cdbd80b7fec2d7eefa47107e262270e74ff6a987fa9f8a60c23c"
+    }
+  ],
+  "negative_policy": "Ate um negativo por par positivo de cada smell, apenas nos 182 arquivos originais; seed fixa.",
+  "negative_assumption": "Ausencia na saida completa e tratada como negativo segundo DPy, assumindo os onze detectores habilitados conforme configuracao informada pelo usuario. Os JSONs nao comprovam sucesso individual de cada detector.",
+  "matching_version": "occurrence-v1"
+}

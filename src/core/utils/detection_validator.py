@@ -1,38 +1,15 @@
 """Validador pós-processamento para filtrar falsos positivos das detecções."""
 
 import re
+import math
+from core.smell_rules import THRESHOLDS, MAGIC_NUMBER_EXCEPTIONS
 from typing import Any, Dict
 
 
 class DetectionValidator:
     """Valida detecções para remover falsos positivos óbvios."""
 
-    TRIVIAL_MAGIC_NUMBERS = {
-        "0",
-        "1",
-        "-1",
-        "2",
-        "-2",
-        "0.0",
-        "1.0",
-        "-1.0",
-        "2.0",
-        "-2.0",
-        "0.0f",
-        "1.0f",
-        "-1.0f",
-        "2.0f",
-        "-2.0f",
-        "0L",
-        "1L",
-        "-1L",
-        "2L",
-        "-2L",
-        "10",
-        "100",
-        "-10",
-        "-100",
-    }
+    TRIVIAL_MAGIC_NUMBERS = {"0", "1", "-1", "0.0", "1.0", "-1.0"}
 
     # Módulos/bibliotecas comuns que não são message chains
     MODULE_PREFIXES = {
@@ -65,6 +42,9 @@ class DetectionValidator:
         if "long identifier" in smell_normalized:
             return DetectionValidator._validate_long_identifier(detection)
 
+        if "long method" in smell_normalized:
+            return DetectionValidator._validate_long_method(detection)
+
         if "long statement" in smell_normalized:
             return DetectionValidator._validate_long_statement(detection)
 
@@ -95,13 +75,13 @@ class DetectionValidator:
     def _validate_long_identifier(detection: Dict[str, Any]) -> bool:
         """Valida Long Identifier: só aceitar se estritamente > threshold e não for de biblioteca."""
         length = detection.get("length", 0)
-        threshold = detection.get("threshold", 20)
+        threshold = THRESHOLDS['long identifier']
         identifier_name = detection.get("identifier_name", "")
         description = detection.get("Description", "")
 
         try:
             length_val = float(length) if length else 0
-            threshold_val = float(threshold) if threshold else 20
+            threshold_val = float(threshold)
         except (ValueError, TypeError):
             return True
 
@@ -119,24 +99,18 @@ class DetectionValidator:
                 return True
 
         # Verificar se é identifier de biblioteca (apenas se tiver nome)
-        if identifier_name:
-            name_lower = identifier_name.lower()
-            # Ignorar dunder methods
-            if name_lower.startswith("__") and name_lower.endswith("__"):
-                return False
-
         return length_val > threshold_val
 
     @staticmethod
     def _validate_long_statement(detection: Dict[str, Any]) -> bool:
         """Valida Long Statement: só aceitar se estritamente > threshold."""
         line_length = detection.get("line_length", 0)
-        threshold = detection.get("threshold", 120)
+        threshold = THRESHOLDS['long statement']
         description = detection.get("Description", "")
 
         try:
             length_val = float(line_length) if line_length else 0
-            threshold_val = float(threshold) if threshold else 120
+            threshold_val = float(threshold)
         except (ValueError, TypeError):
             return True
 
@@ -168,37 +142,30 @@ class DetectionValidator:
 
     @staticmethod
     def _validate_magic_number(detection: Dict[str, Any]) -> bool:
-        """Valida Magic Number: remove números triviais."""
-        description = detection.get("Description", "")
-
-        match = re.search(r"Magic number\s+([0-9.eE+-]+)", description, re.IGNORECASE)
-        if match:
-            number_str = match.group(1).strip()
-
-            number_str = number_str.replace("e+", "e").replace("E+", "E")
-
-            if number_str in DetectionValidator.TRIVIAL_MAGIC_NUMBERS:
-                return False
-
-            try:
-                num_val = float(number_str)
-                if num_val in (0, 1, -1):
-                    return False
-            except ValueError:
-                pass
-
-        return True
+        """As unicas excecoes numericas sao 0, 1 e -1."""
+        value = detection.get("number")
+        if value is None:
+            match = re.search(r"Magic number\s+([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)",
+                              str(detection.get("Description", "")), re.IGNORECASE)
+            value = match.group(1) if match else None
+        if value is None:
+            return True  # Politica original; sem evidencia numerica nao ha TP no avaliador.
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return False
+        return math.isfinite(number) and number not in MAGIC_NUMBER_EXCEPTIONS
 
     @staticmethod
     def _validate_long_lambda(detection: Dict[str, Any]) -> bool:
         """Valida Long Lambda: só aceitar se estritamente > threshold."""
         lambda_length = detection.get("lambda_length", 0)
-        threshold = detection.get("threshold", 80)
+        threshold = THRESHOLDS['long lambda function']
         description = detection.get("Description", "")
 
         try:
             length_val = float(lambda_length) if lambda_length else 0
-            threshold_val = float(threshold) if threshold else 80
+            threshold_val = float(threshold)
         except (ValueError, TypeError):
             return True
 
@@ -220,12 +187,12 @@ class DetectionValidator:
     def _validate_complex_method(detection: Dict[str, Any]) -> bool:
         """Valida Complex Method: só aceitar se estritamente > threshold (CC > 7)."""
         cc = detection.get("cyclomatic_complexity", 0)
-        threshold = detection.get("threshold", 7)
+        threshold = THRESHOLDS['complex method']
         description = detection.get("Description", "")
 
         try:
             cc_val = float(cc) if cc else 0
-            threshold_val = float(threshold) if threshold else 7
+            threshold_val = float(threshold)
         except (ValueError, TypeError):
             return True
 
@@ -255,12 +222,12 @@ class DetectionValidator:
     def _validate_long_parameter_list(detection: Dict[str, Any]) -> bool:
         """Valida Long Parameter List: só aceitar se estritamente > threshold (> 4)."""
         param_count = detection.get("parameter_count", 0)
-        threshold = detection.get("threshold", 4)
+        threshold = THRESHOLDS['long parameter list']
         description = detection.get("Description", "")
 
         try:
             count_val = float(param_count) if param_count else 0
-            threshold_val = float(threshold) if threshold else 4
+            threshold_val = float(threshold)
         except (ValueError, TypeError):
             return True
 
@@ -289,12 +256,12 @@ class DetectionValidator:
     def _validate_long_message_chain(detection: Dict[str, Any]) -> bool:
         """Valida Long Message Chain: só aceitar se > 2 métodos encadeados."""
         chain_length = detection.get("chain_length", 0)
-        threshold = detection.get("threshold", 2)
+        threshold = THRESHOLDS['long message chain']
         description = detection.get("Description", "")
 
         try:
             length_val = float(chain_length) if chain_length else 0
-            threshold_val = float(threshold) if threshold else 2
+            threshold_val = float(threshold)
         except (ValueError, TypeError):
             return True
 
@@ -325,12 +292,12 @@ class DetectionValidator:
     def _validate_complex_conditional(detection: Dict[str, Any]) -> bool:
         """Valida Complex Conditional: só aceitar se > 2 operadores lógicos."""
         logical_operators = detection.get("logical_operators", 0)
-        threshold = detection.get("threshold", 2)
+        threshold = THRESHOLDS['complex conditional']
         description = detection.get("Description", "")
 
         try:
             ops_val = float(logical_operators) if logical_operators else 0
-            threshold_val = float(threshold) if threshold else 2
+            threshold_val = float(threshold)
         except (ValueError, TypeError):
             return True
 
@@ -355,6 +322,16 @@ class DetectionValidator:
                 return True
 
         return ops_val > threshold_val
+
+    @staticmethod
+    def _validate_long_method(detection: Dict[str, Any]) -> bool:
+        value = detection.get("total_lines")
+        if value is None:
+            return True
+        try:
+            return math.isfinite(float(value)) and float(value) > THRESHOLDS['long method']
+        except (TypeError, ValueError):
+            return False
 
     @staticmethod
     def filter_detections(detections: list[Dict[str, Any]]) -> list[Dict[str, Any]]:

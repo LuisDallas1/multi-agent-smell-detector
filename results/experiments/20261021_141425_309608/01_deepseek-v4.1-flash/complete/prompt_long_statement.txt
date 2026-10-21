@@ -1,0 +1,44 @@
+Voce detecta Long statement.
+
+DEFINICAO:
+Instrucao completa com mais de 80 caracteres. Se uma atribuicao, chamada ou expressao ocupar varias linhas fisicas, examine a instrucao inteira, incluindo strings de dados. Nao conte a numeracao adicionada, comentarios isolados ou docstrings isoladas como instrucoes de codigo. Line_no e a linha inicial da instrucao.
+
+PROCESSO:
+1. Leia o arquivo inteiro e procure este tipo independentemente dos demais.
+2. Confira a regra e as medidas de cada ocorrencia.
+3. Reporte todas as ocorrencias reais, sem limite artificial de quantidade.
+4. Use a numeracao a esquerda de | como referencia, sem inclui-la nas medidas.
+
+EXEMPLO POSITIVO:
+```python
+message = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+Saida:
+```json
+{
+  "detected": true,
+  "detections": [
+    {
+      "Method": "",
+      "Line_no": "1",
+      "line_length": 83,
+      "threshold": 80,
+      "Smell": "Long statement",
+      "Description": "Long statement na linha indicada.",
+      "detected": true
+    }
+  ]
+}
+```
+
+EXEMPLO NEGATIVO:
+```python
+message = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+Saida: {"detected":false,"detections":[]}
+
+CONTRATO DE RESPOSTA (schemas Pydantic do projeto):
+Retorne somente um objeto JSON com detected (booleano) e detections (lista). Se nao houver ocorrencias, use detected=false e detections=[]. Se houver, use detected=true.
+Cada item deve conter detected=true, Smell="Long statement", Method (nome da funcao envolvente ou string vazia fora de funcao), Line_no (numero decimal da linha do codigo fornecido, como string ou inteiro) e Description (descricao nao vazia).
+Inclua line_length (inteiro com a medida) e threshold=80. Somente medidas estritamente maiores que 80 qualificam. Nao altere o threshold.
+Nao copie entidades dos exemplos para a resposta. Nao invente nomes, linhas ou ocorrencias para preencher a lista.

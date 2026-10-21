@@ -1,0 +1,604 @@
+File,Smell,Count,Label,Source
+Agently/agently/builtins/hookers/RuntimeStorageSinkHooker.py,empty catch block,1,positive,sample_pairs.csv
+Agently/agently/builtins/hookers/RuntimeStorageSinkHooker.py,long parameter list,0,negative,absence_in_full_dpy_output
+Agently/agently/builtins/hookers/RuntimeStorageSinkHooker.py,long statement,1,positive,sample_pairs.csv
+Agently/agently/builtins/hookers/RuntimeStorageSinkHooker.py,missing default,1,positive,sample_pairs.csv
+Agently/agently/builtins/plugins/ActionExecutor/MCPActionExecutor.py,complex method,0,negative,absence_in_full_dpy_output
+Agently/agently/builtins/plugins/ActionExecutor/MCPActionExecutor.py,empty catch block,2,positive,sample_pairs.csv
+Agently/agently/builtins/plugins/ActionExecutor/MCPActionExecutor.py,long method,0,negative,absence_in_full_dpy_output
+Agently/agently/builtins/plugins/ActionExecutor/MCPActionExecutor.py,magic number,0,negative,absence_in_full_dpy_output
+Agently/agently/builtins/plugins/ModelRequester/OpenAICompatible/modules/request_builder.py,complex method,1,positive,sample_pairs.csv
+Agently/agently/builtins/plugins/ModelRequester/OpenAICompatible/modules/request_builder.py,empty catch block,0,negative,absence_in_full_dpy_output
+Agently/agently/builtins/plugins/ModelRequester/OpenAICompatible/modules/request_builder.py,long identifier,3,positive,sample_pairs.csv
+Agently/agently/builtins/plugins/ModelRequester/OpenAICompatible/modules/request_builder.py,long message chain,0,negative,absence_in_full_dpy_output
+Agently/agently/builtins/plugins/ModelRequester/OpenAICompatible/modules/request_builder.py,long method,1,positive,sample_pairs.csv
+Agently/agently/builtins/plugins/ResponseParser/modules/xml_field.py,long method,1,positive,sample_pairs.csv
+Agently/agently/builtins/plugins/ResponseParser/modules/xml_field.py,magic number,2,positive,sample_pairs.csv
+Agently/agently/builtins/plugins/ToolManager/AgentlyToolManager.py,magic number,1,positive,sample_pairs.csv
+Agently/agently/builtins/plugins/ToolManager/AgentlyToolManager.py,missing default,1,positive,sample_pairs.csv
+Agently/agently/core/TaskWorkspace/FileIORegistry.py,complex conditional,0,negative,absence_in_full_dpy_output
+Agently/agently/core/TaskWorkspace/FileIORegistry.py,long lambda function,1,positive,sample_pairs.csv
+Agently/agently/core/TaskWorkspace/FileIORegistry.py,missing default,0,negative,absence_in_full_dpy_output
+Agently/agently/core/__init__.py,long identifier,0,negative,absence_in_full_dpy_output
+Agently/agently/core/__init__.py,long method,0,negative,absence_in_full_dpy_output
+Agently/agently/core/__init__.py,long statement,1,positive,sample_pairs.csv
+Agently/agently/core/orchestration/TaskDAG/TaskDAGResolver.py,complex method,0,negative,absence_in_full_dpy_output
+Agently/agently/core/orchestration/TaskDAG/TaskDAGResolver.py,long message chain,1,positive,sample_pairs.csv
+Agently/agently/core/orchestration/TriggerFlow/process/ForEachProcess.py,long lambda function,0,negative,absence_in_full_dpy_output
+Agently/agently/core/orchestration/TriggerFlow/process/ForEachProcess.py,long method,1,positive,sample_pairs.csv
+Agently/agently/core/orchestration/TriggerFlow/process/ForEachProcess.py,long parameter list,0,negative,absence_in_full_dpy_output
+Agently/agently/core/orchestration/TriggerFlow/process/ForEachProcess.py,magic number,0,negative,absence_in_full_dpy_output
+Agently/agently/types/data/action.py,long statement,1,positive,sample_pairs.csv
+Agently/agently/types/data/skill.py,complex conditional,1,positive,sample_pairs.csv
+Agently/agently/types/data/skill.py,long lambda function,0,negative,absence_in_full_dpy_output
+Agently/agently/types/data/skill.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/circuits/optimization_pass_test.py,long lambda function,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/circuits/optimization_pass_test.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/circuits/optimization_pass_test.py,magic number,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py,empty catch block,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py,long identifier,3,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py,long lambda function,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py,long method,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py,long parameter list,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py,long statement,9,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py,magic number,3,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/paulistring/clifford_optimize.py,complex conditional,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/paulistring/clifford_optimize.py,complex method,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/paulistring/clifford_optimize.py,empty catch block,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/contrib/paulistring/clifford_optimize.py,long method,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/contrib/paulistring/clifford_optimize.py,long parameter list,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/interop/quirk/cells/control_cells.py,long lambda function,2,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/interop/quirk/cells/control_cells.py,magic number,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/global_phase_op.py,complex conditional,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/ops/global_phase_op.py,empty catch block,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/global_phase_op.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/identity_test.py,complex method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/identity_test.py,long message chain,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/ops/identity_test.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/identity_test.py,long parameter list,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/set_variable_op.py,complex conditional,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/set_variable_op.py,complex method,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/ops/set_variable_op.py,long message chain,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/ops/set_variable_op.py,magic number,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/protocols/json_test_data/spec.py,complex method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/protocols/json_test_data/spec.py,empty catch block,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/protocols/json_test_data/spec.py,long identifier,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/protocols/json_test_data/spec.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/protocols/json_test_data/spec.py,long statement,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/transformers/analytical_decompositions/clifford_decomposition.py,complex method,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/transformers/analytical_decompositions/clifford_decomposition.py,long identifier,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/transformers/analytical_decompositions/clifford_decomposition.py,magic number,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/transformers/optimize_for_target_gateset.py,complex conditional,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/transformers/qubit_management_transformers.py,complex method,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/transformers/qubit_management_transformers.py,long lambda function,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/transformers/qubit_management_transformers.py,long method,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/transformers/routing/line_initial_mapper_test.py,complex conditional,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/transformers/routing/line_initial_mapper_test.py,complex method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/transformers/routing/line_initial_mapper_test.py,empty catch block,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/transformers/routing/line_initial_mapper_test.py,long lambda function,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/transformers/routing/line_initial_mapper_test.py,long message chain,2,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/api/v2/run_context_test.py,complex method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/api/v2/run_context_test.py,long method,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/engine/abstract_local_job_test.py,complex conditional,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/abstract_local_job_test.py,long message chain,4,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/engine/abstract_local_job_test.py,long parameter list,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/processor_sampler.py,complex conditional,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/engine/processor_sampler.py,complex method,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/engine/qcs_notebook.py,complex conditional,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/qcs_notebook.py,complex method,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/engine/qcs_notebook.py,empty catch block,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/qcs_notebook.py,long identifier,2,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/engine/qcs_notebook_test.py,complex conditional,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/qcs_notebook_test.py,complex method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/qcs_notebook_test.py,long lambda function,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/qcs_notebook_test.py,long message chain,2,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/engine/qcs_notebook_test.py,long parameter list,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/runtime_estimator_test.py,long message chain,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/runtime_estimator_test.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/engine/runtime_estimator_test.py,long parameter list,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/experimental/ops/coupler_pulse.py,long parameter list,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/study/finite_random_variable_test.py,long lambda function,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/study/finite_random_variable_test.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/study/finite_random_variable_test.py,missing default,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/transformers/target_gatesets/sycamore_gateset.py,long lambda function,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/transformers/target_gatesets/sycamore_gateset.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/transformers/target_gatesets/sycamore_gateset.py,magic number,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/workflow/qubit_placement_test.py,long message chain,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/workflow/qubit_placement_test.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-ionq/cirq_ionq/ionq_gateset.py,empty catch block,0,negative,absence_in_full_dpy_output
+Cirq/cirq-ionq/cirq_ionq/ionq_gateset.py,long lambda function,1,positive,sample_pairs.csv
+Cirq/cirq-ionq/cirq_ionq/ionq_gateset.py,long parameter list,0,negative,absence_in_full_dpy_output
+Cirq/cirq-ionq/cirq_ionq/ionq_gateset.py,missing default,0,negative,absence_in_full_dpy_output
+Cirq/cirq-web/cirq_web/circuits/symbols.py,empty catch block,1,positive,sample_pairs.csv
+Cirq/cirq-web/cirq_web/circuits/symbols.py,long identifier,1,positive,sample_pairs.csv
+Cirq/cirq-web/cirq_web/circuits/symbols.py,magic number,0,negative,absence_in_full_dpy_output
+Cirq/dev_tools/git_env_tools.py,empty catch block,1,positive,sample_pairs.csv
+Cirq/dev_tools/git_env_tools.py,long lambda function,0,negative,absence_in_full_dpy_output
+Cirq/dev_tools/git_env_tools.py,long parameter list,0,negative,absence_in_full_dpy_output
+Cirq/dev_tools/git_env_tools.py,missing default,0,negative,absence_in_full_dpy_output
+EvoScientist/EvoScientist/channels/wechat/verify_server.py,long identifier,0,negative,absence_in_full_dpy_output
+EvoScientist/EvoScientist/channels/wechat/verify_server.py,long method,0,negative,absence_in_full_dpy_output
+EvoScientist/EvoScientist/channels/wechat/verify_server.py,magic number,1,positive,sample_pairs.csv
+EvoScientist/EvoScientist/config/onboard/helpers.py,complex method,2,positive,sample_pairs.csv
+EvoScientist/EvoScientist/config/onboard/helpers.py,long lambda function,1,positive,sample_pairs.csv
+EvoScientist/EvoScientist/config/onboard/helpers.py,long message chain,0,negative,absence_in_full_dpy_output
+EvoScientist/EvoScientist/gateway/types.py,complex conditional,0,negative,absence_in_full_dpy_output
+EvoScientist/EvoScientist/gateway/types.py,long statement,1,positive,sample_pairs.csv
+EvoScientist/EvoScientist/middleware/background.py,long identifier,2,positive,sample_pairs.csv
+EvoScientist/EvoScientist/middleware/events.py,empty catch block,0,negative,absence_in_full_dpy_output
+EvoScientist/EvoScientist/middleware/events.py,long statement,3,positive,sample_pairs.csv
+EvoScientist/EvoScientist/middleware/events.py,magic number,0,negative,absence_in_full_dpy_output
+EvoScientist/EvoScientist/stream/formatter.py,empty catch block,2,positive,sample_pairs.csv
+EvoScientist/EvoScientist/stream/formatter.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/scripts/bench_toolcall_identity.py,complex conditional,1,positive,sample_pairs.csv
+bernstein/scripts/bench_toolcall_identity.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/scripts/bench_toolcall_identity.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/scripts/check_coverage_thresholds.py,empty catch block,1,positive,sample_pairs.csv
+bernstein/scripts/check_coverage_thresholds.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/scripts/check_coverage_thresholds.py,long method,1,positive,sample_pairs.csv
+bernstein/scripts/demo_article12_export.py,long method,1,positive,sample_pairs.csv
+bernstein/scripts/demo_article12_export.py,long statement,8,positive,sample_pairs.csv
+bernstein/scripts/demo_article12_export.py,magic number,1,positive,sample_pairs.csv
+bernstein/src/bernstein/adapters/claude_stream_parser.py,complex conditional,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/adapters/claude_stream_parser.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/adapters/claude_stream_parser.py,missing default,1,positive,sample_pairs.csv
+bernstein/src/bernstein/adapters/claude_wrapper_script.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/best_of_n_rank_cmd.py,complex method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/best_of_n_rank_cmd.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/best_of_n_rank_cmd.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/best_of_n_rank_cmd.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/best_of_n_rank_cmd.py,long statement,3,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/best_of_n_rank_cmd.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/blast_radius_cmd.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/blast_radius_cmd.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/blast_radius_cmd.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/bom_cmd.py,complex method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/bom_cmd.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/bom_cmd.py,long identifier,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/bom_cmd.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/compaction_cmd.py,complex method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/compaction_cmd.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/compaction_cmd.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/conn_cmd.py,complex conditional,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/conn_cmd.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/creds_cmd.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/creds_cmd.py,long lambda function,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/creds_cmd.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/creds_cmd.py,long parameter list,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/review_responder_cmd.py,long identifier,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/review_responder_cmd.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/token_cmd.py,complex method,2,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/token_cmd.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/token_cmd.py,long message chain,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/token_cmd.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/token_cmd.py,long parameter list,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/token_cmd.py,magic number,7,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/token_cmd.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/undo_cmd.py,complex conditional,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/commands/undo_cmd.py,long parameter list,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/undo_cmd.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/commands/worktrees_cmd.py,long lambda function,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/display/image_renderer.py,complex method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/display/image_renderer.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/display/image_renderer.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/display/image_renderer.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/display/image_renderer.py,missing default,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/display/leaderboard.py,long lambda function,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/display/leaderboard.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/doctor/suggest_docs.py,empty catch block,3,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/doctor/suggest_docs.py,long identifier,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/doctor/suggest_docs.py,long message chain,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/doctor/suggest_docs.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/doctor/suggest_docs.py,magic number,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/side_query.py,complex conditional,1,positive,sample_pairs.csv
+bernstein/src/bernstein/cli/side_query.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/side_query.py,long lambda function,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/cli/side_query.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/admission/engine.py,long lambda function,4,positive,sample_pairs.csv
+bernstein/src/bernstein/core/admission/engine.py,long parameter list,4,positive,sample_pairs.csv
+bernstein/src/bernstein/core/agents/agent_profiling.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/agents/agent_profiling.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/agents/agent_trust.py,complex conditional,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/agents/agent_trust.py,long message chain,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/agents/agent_trust.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/agents/agent_trust.py,missing default,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/config/upgrade_executor.py,long message chain,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/config/upgrade_executor.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/config/upgrade_executor.py,missing default,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/cost/cost_forecast.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/cost/cost_forecast.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/fleet/tui.py,complex conditional,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/fleet/tui.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/fleet/tui.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/fleet/tui.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/govern/__init__.py,empty catch block,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/govern/__init__.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/govern/__init__.py,long message chain,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/govern/__init__.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/govern/__init__.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/knowledge/semantic_cache.py,complex method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/knowledge/semantic_cache.py,long lambda function,2,positive,sample_pairs.csv
+bernstein/src/bernstein/core/knowledge/semantic_cache.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/orchestration/best_of_n.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/orchestration/best_of_n.py,long lambda function,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/orchestration/best_of_n.py,long message chain,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/orchestration/best_of_n.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/orchestration/orchestrator_summary.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/orchestration/orchestrator_summary.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/orchestration/orchestrator_summary.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/orchestration/orchestrator_summary.py,magic number,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/orchestration/run_closure_owner.py,complex conditional,2,positive,sample_pairs.csv
+bernstein/src/bernstein/core/orchestration/run_closure_owner.py,long lambda function,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/orchestration/run_closure_owner.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/planning/roadmap_runtime.py,complex conditional,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/planning/roadmap_runtime.py,complex method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/planning/roadmap_runtime.py,empty catch block,3,positive,sample_pairs.csv
+bernstein/src/bernstein/core/planning/roadmap_runtime.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/planning/roadmap_runtime.py,long message chain,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/planning/roadmap_runtime.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/planning/roadmap_runtime.py,magic number,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/planning/roadmap_runtime.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/planning/scenario_library.py,complex conditional,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/planning/scenario_library.py,long parameter list,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/planning/workflow_importer.py,complex method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/planning/workflow_importer.py,long identifier,3,positive,sample_pairs.csv
+bernstein/src/bernstein/core/planning/workflow_importer.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/quality/graduation.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/quality/graduation.py,missing default,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/quality/review_consensus.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/quality/review_consensus.py,long lambda function,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routes/dashboard.py,complex conditional,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routes/dashboard.py,long message chain,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routes/dashboard.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routes/graphql_api.py,long identifier,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routes/graphql_api.py,long message chain,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routes/graphql_api.py,long parameter list,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routes/graphql_api.py,missing default,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routes/task_claim_receipt.py,complex method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routes/task_claim_receipt.py,long identifier,4,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routes/task_claim_receipt.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routing/cascade.py,long lambda function,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routing/cascade.py,long message chain,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routing/cascade.py,long parameter list,2,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routing/llm.py,complex conditional,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routing/llm.py,complex method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routing/llm.py,long lambda function,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routing/role_classifier.py,long message chain,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routing/role_classifier.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routing/role_classifier.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routing/router_policies.py,long lambda function,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/routing/router_policies.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/routing/router_policies.py,missing default,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/security/run_closure.py,complex conditional,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/security/security_posture.py,long parameter list,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/security/security_posture.py,missing default,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/security/toolcall_identity.py,complex conditional,2,positive,sample_pairs.csv
+bernstein/src/bernstein/core/security/toolcall_identity.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/server/server_middleware.py,complex conditional,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/server/server_middleware.py,complex method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/tasks/batch_router.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/tasks/batch_router.py,long identifier,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/tasks/batch_router.py,long lambda function,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/tasks/batch_router.py,long method,1,positive,sample_pairs.csv
+bernstein/src/bernstein/core/tasks/batch_router.py,long parameter list,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/gitlab_app/ci_router.py,complex conditional,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/gitlab_app/ci_router.py,long identifier,2,positive,sample_pairs.csv
+bernstein/src/bernstein/gitlab_app/ci_router.py,long lambda function,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/gitlab_app/ci_router.py,long message chain,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/gitlab_app/ci_router.py,long parameter list,1,positive,sample_pairs.csv
+bernstein/src/bernstein/gitlab_app/cost_reporter.py,long method,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/gitlab_app/cost_reporter.py,long parameter list,3,positive,sample_pairs.csv
+dynamiq/dynamiq/cli/commands/app.py,magic number,1,positive,sample_pairs.csv
+dynamiq/dynamiq/cli/commands/evaluation.py,empty catch block,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/cli/commands/evaluation.py,long message chain,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/cli/commands/evaluation.py,magic number,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/agents/prompts/manager.py,empty catch block,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/nodes/agents/prompts/manager.py,long parameter list,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/nodes/agents/prompts/manager.py,magic number,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/nodes/agents/prompts/manager.py,missing default,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/agents/prompts/overrides/gpt.py,long lambda function,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/nodes/agents/prompts/overrides/gpt.py,long statement,2,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/agents/prompts/overrides/gpt.py,magic number,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/nodes/agents/prompts/overrides/gpt.py,missing default,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/nodes/knowledgebases/vertex.py,long message chain,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/operators/operators.py,empty catch block,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/nodes/operators/operators.py,long lambda function,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/operators/operators.py,long parameter list,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/tools/e2b_sandbox.py,complex method,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/tools/e2b_sandbox.py,empty catch block,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/tools/e2b_sandbox.py,long identifier,2,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/tools/e2b_sandbox.py,long lambda function,0,negative,absence_in_full_dpy_output
+dynamiq/dynamiq/utils/json_parser.py,complex conditional,1,positive,sample_pairs.csv
+dynamiq/dynamiq/utils/json_parser.py,empty catch block,2,positive,sample_pairs.csv
+fast-agent/hatch_build.py,complex conditional,0,negative,absence_in_full_dpy_output
+fast-agent/hatch_build.py,empty catch block,1,positive,sample_pairs.csv
+fast-agent/hatch_build.py,long identifier,2,positive,sample_pairs.csv
+fast-agent/hatch_build.py,long method,1,positive,sample_pairs.csv
+fast-agent/hatch_build.py,long parameter list,0,negative,absence_in_full_dpy_output
+fast-agent/hatch_build.py,long statement,3,positive,sample_pairs.csv
+fast-agent/hatch_build.py,magic number,0,negative,absence_in_full_dpy_output
+fast-agent/scripts/model_picker_proto_dialogs.py,complex method,0,negative,absence_in_full_dpy_output
+fast-agent/scripts/model_picker_proto_dialogs.py,empty catch block,0,negative,absence_in_full_dpy_output
+fast-agent/scripts/model_picker_proto_dialogs.py,long identifier,0,negative,absence_in_full_dpy_output
+fast-agent/scripts/model_picker_proto_dialogs.py,long method,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/agents/subagent_transcript.py,complex conditional,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/agents/subagent_transcript.py,long lambda function,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/agents/subagent_transcript.py,long message chain,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/cli/__main__.py,complex method,3,positive,sample_pairs.csv
+fast-agent/src/fast_agent/cli/__main__.py,empty catch block,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/cli/__main__.py,long message chain,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/cli/__main__.py,long statement,7,positive,sample_pairs.csv
+fast-agent/src/fast_agent/cli/__main__.py,magic number,4,positive,sample_pairs.csv
+fast-agent/src/fast_agent/cli/commands/export.py,complex conditional,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/cli/commands/export.py,complex method,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/cli/commands/export.py,long message chain,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/cli/commands/export.py,long parameter list,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/cli/commands/export.py,magic number,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/core/instruction_utils.py,complex method,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/core/instruction_utils.py,long message chain,3,positive,sample_pairs.csv
+fast-agent/src/fast_agent/core/instruction_utils.py,long parameter list,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/marketplace/registry_urls.py,complex conditional,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/marketplace/registry_urls.py,long lambda function,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/plugins/marketplace.py,complex conditional,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/plugins/marketplace.py,long method,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/plugins/marketplace.py,missing default,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/session/locking.py,complex conditional,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/session/locking.py,empty catch block,2,positive,sample_pairs.csv
+fast-agent/src/fast_agent/session/locking.py,long lambda function,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/session/locking.py,long method,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/session/locking.py,magic number,2,positive,sample_pairs.csv
+fast-agent/src/fast_agent/tools/filesystem_runtime_base.py,complex conditional,1,positive,sample_pairs.csv
+fast-agent/src/fast_agent/tools/filesystem_runtime_base.py,complex method,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/ui/markdown/content.py,complex method,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/ui/markdown/content.py,long statement,3,positive,sample_pairs.csv
+fast-agent/src/fast_agent/ui/prompt/special_commands.py,complex method,0,negative,absence_in_full_dpy_output
+fast-agent/src/fast_agent/ui/prompt/special_commands.py,missing default,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/_util/generate_config_args.py,missing default,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/_util/s3_monitor.py,complex method,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/_util/s3_monitor.py,long identifier,2,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/_util/s3_monitor.py,magic number,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/_util/zipfile.py,long statement,3,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/_util/zipfile.py,magic number,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/agent/_bridge/completions.py,empty catch block,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/agent/_bridge/completions.py,long message chain,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/log/_recover/_api.py,long lambda function,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/log/_recover/_api.py,long message chain,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_batch.py,complex conditional,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_batch.py,complex method,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_batch.py,long parameter list,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_batch.py,missing default,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_citations.py,complex conditional,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_citations.py,complex method,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_citations.py,long method,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_citations.py,long statement,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/model/_providers/_anthropic_citations.py,missing default,2,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/model/_providers/openai_completions.py,long parameter list,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/model/_providers/openai_completions.py,magic number,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/tool/_tools/_computer/_resources/tool/computer_tool.py,long identifier,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/tool/_tools/_computer/_resources/tool/computer_tool.py,long lambda function,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/tool/_tools/_computer/_resources/tool/computer_tool.py,missing default,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/util/_checkpoint/_host_egress.py,complex method,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/util/_checkpoint/_host_egress.py,empty catch block,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/util/_checkpoint/_host_egress.py,long method,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/util/_sandbox/docker/failure.py,complex conditional,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/util/_sandbox/docker/failure.py,long lambda function,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_tool_support/src/inspect_tool_support/_cli/main.py,complex method,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_tool_support/src/inspect_tool_support/_cli/main.py,empty catch block,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_tool_support/src/inspect_tool_support/_cli/main.py,missing default,1,positive,sample_pairs.csv
+parlant/src/parlant/adapters/nlp/hugging_face.py,long identifier,1,positive,sample_pairs.csv
+parlant/src/parlant/adapters/nlp/hugging_face.py,long message chain,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/adapters/nlp/hugging_face.py,long parameter list,1,positive,sample_pairs.csv
+parlant/src/parlant/adapters/nlp/hugging_face.py,magic number,2,positive,sample_pairs.csv
+parlant/src/parlant/adapters/nlp/hugging_face.py,missing default,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/adapters/nlp/openrouter_service.py,complex method,2,positive,sample_pairs.csv
+parlant/src/parlant/adapters/nlp/openrouter_service.py,long lambda function,1,positive,sample_pairs.csv
+parlant/src/parlant/adapters/nlp/openrouter_service.py,long message chain,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/adapters/nlp/openrouter_service.py,long method,1,positive,sample_pairs.csv
+parlant/src/parlant/core/app_modules/context_variables.py,complex method,1,positive,sample_pairs.csv
+parlant/src/parlant/core/app_modules/context_variables.py,magic number,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/app_modules/context_variables.py,missing default,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/emission/event_buffer.py,empty catch block,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/emission/event_buffer.py,long identifier,1,positive,sample_pairs.csv
+parlant/src/parlant/core/emission/event_buffer.py,long parameter list,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/engines/alpha/hooks.py,complex method,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/engines/alpha/hooks.py,long method,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/engines/alpha/hooks.py,long parameter list,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/engines/alpha/hooks.py,long statement,3,positive,sample_pairs.csv
+parlant/src/parlant/core/engines/alpha/hooks.py,missing default,1,positive,sample_pairs.csv
+pennylane/pennylane/backline/runtime/runtime_call.py,empty catch block,1,positive,sample_pairs.csv
+pennylane/pennylane/backline/runtime/runtime_call.py,long identifier,1,positive,sample_pairs.csv
+pennylane/pennylane/backline/runtime/runtime_call.py,long message chain,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/backline/runtime/runtime_call.py,long parameter list,1,positive,sample_pairs.csv
+pennylane/pennylane/backline/runtime/runtime_call.py,missing default,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/devices/__init__.py,complex method,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/devices/__init__.py,long message chain,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/devices/__init__.py,long statement,1,positive,sample_pairs.csv
+pennylane/pennylane/labs/templates/superposition_thc.py,complex conditional,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/labs/templates/superposition_thc.py,long lambda function,1,positive,sample_pairs.csv
+pennylane/pennylane/labs/templates/superposition_thc.py,long message chain,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/labs/templates/superposition_thc.py,missing default,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/math/interface_utils.py,long message chain,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/math/interface_utils.py,long parameter list,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/math/interface_utils.py,missing default,1,positive,sample_pairs.csv
+pennylane/pennylane/ops/functions/eigvals.py,complex conditional,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/ops/functions/eigvals.py,complex method,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/ops/functions/eigvals.py,empty catch block,1,positive,sample_pairs.csv
+pennylane/pennylane/ops/functions/eigvals.py,long identifier,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/ops/functions/eigvals.py,magic number,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/ops/functions/matrix.py,long lambda function,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/ops/functions/matrix.py,long message chain,1,positive,sample_pairs.csv
+pennylane/pennylane/ops/functions/matrix.py,magic number,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/ops/functions/matrix.py,missing default,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/optimize/rotoselect.py,long identifier,1,positive,sample_pairs.csv
+pennylane/pennylane/optimize/rotoselect.py,long lambda function,1,positive,sample_pairs.csv
+pennylane/pennylane/optimize/rotoselect.py,long method,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/resource/mlir_specs.py,long identifier,3,positive,sample_pairs.csv
+pennylane/pennylane/resource/mlir_specs.py,long method,1,positive,sample_pairs.csv
+pennylane/pennylane/resource/mlir_specs.py,long parameter list,1,positive,sample_pairs.csv
+pennylane/pennylane/resource/mlir_specs.py,missing default,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/templates/subroutines/iqp.py,long identifier,2,positive,sample_pairs.csv
+pennylane/pennylane/templates/subroutines/iqp.py,long message chain,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/templates/subroutines/iqp.py,long method,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/templates/subroutines/iqp.py,long statement,5,positive,sample_pairs.csv
+pennylane/pennylane/templates/subroutines/iqp.py,magic number,1,positive,sample_pairs.csv
+pennylane/pennylane/templates/subroutines/qft.py,long method,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/templates/subroutines/qft.py,long statement,1,positive,sample_pairs.csv
+pennylane/pennylane/templates/subroutines/select_pauli_rot.py,long identifier,2,positive,sample_pairs.csv
+pennylane/pennylane/templates/subroutines/select_pauli_rot.py,long lambda function,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/templates/subroutines/select_pauli_rot.py,missing default,1,positive,sample_pairs.csv
+pennylane/pennylane/transforms/batch_partial.py,complex method,1,positive,sample_pairs.csv
+pennylane/pennylane/transforms/batch_partial.py,empty catch block,1,positive,sample_pairs.csv
+pennylane/pennylane/transforms/batch_partial.py,long identifier,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/transforms/batch_partial.py,long lambda function,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/transforms/batch_partial.py,missing default,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/transforms/optimization/optimization_utils.py,complex conditional,1,positive,sample_pairs.csv
+pennylane/pennylane/transforms/optimization/optimization_utils.py,complex method,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/transforms/optimization/optimization_utils.py,long identifier,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/transforms/optimization/optimization_utils.py,long lambda function,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/transforms/optimization/optimization_utils.py,long method,0,negative,absence_in_full_dpy_output
+pennylane/pennylane/transforms/optimization/optimization_utils.py,magic number,7,positive,sample_pairs.csv
+private-gpt/private_gpt/artifact_index/vector_artifact_index.py,long parameter list,1,positive,sample_pairs.csv
+private-gpt/private_gpt/components/ingest/transformations/markdown_normalization_transform.py,complex conditional,1,positive,sample_pairs.csv
+private-gpt/private_gpt/components/ingest/transformations/markdown_normalization_transform.py,empty catch block,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/ingest/transformations/markdown_normalization_transform.py,long identifier,1,positive,sample_pairs.csv
+private-gpt/private_gpt/components/ingest/transformations/markdown_normalization_transform.py,long statement,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/llm/tokenizers/tiktoken.py,complex conditional,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/llm/tokenizers/tiktoken.py,complex method,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/llm/tokenizers/tiktoken.py,empty catch block,2,positive,sample_pairs.csv
+private-gpt/private_gpt/components/postprocessor/tree_expansion/split_subtrees.py,complex conditional,1,positive,sample_pairs.csv
+private-gpt/private_gpt/components/postprocessor/tree_expansion/split_subtrees.py,complex method,1,positive,sample_pairs.csv
+private-gpt/private_gpt/components/postprocessor/tree_expansion/split_subtrees.py,long identifier,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/postprocessor/tree_expansion/split_subtrees.py,long method,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/postprocessor/tree_expansion/split_subtrees.py,long parameter list,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/sandbox/local.py,complex conditional,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/sandbox/local.py,long lambda function,1,positive,sample_pairs.csv
+private-gpt/private_gpt/components/tools/builders/present_files_tool_builder.py,complex conditional,1,positive,sample_pairs.csv
+private-gpt/private_gpt/components/tools/builders/present_files_tool_builder.py,complex method,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/tools/builders/present_files_tool_builder.py,magic number,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/toolsets/factories/filesystem_toolset_factory.py,long lambda function,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/toolsets/factories/filesystem_toolset_factory.py,long message chain,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/toolsets/factories/filesystem_toolset_factory.py,long parameter list,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/toolsets/factories/filesystem_toolset_factory.py,long statement,1,positive,sample_pairs.csv
+private-gpt/private_gpt/components/toolsets/factories/filesystem_toolset_factory.py,magic number,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/web/scraper/runner.py,complex conditional,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/web/scraper/runner.py,long message chain,2,positive,sample_pairs.csv
+private-gpt/private_gpt/components/web/scraper/runner.py,magic number,1,positive,sample_pairs.csv
+private-gpt/private_gpt/events/models/_message.py,complex method,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/events/models/_message.py,long identifier,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/events/models/_message.py,long statement,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/events/models/_message.py,missing default,2,positive,sample_pairs.csv
+private-gpt/private_gpt/server/chat/interceptors/document_file_interceptor.py,long identifier,2,positive,sample_pairs.csv
+private-gpt/private_gpt/server/chat/interceptors/document_file_interceptor.py,long message chain,1,positive,sample_pairs.csv
+private-gpt/private_gpt/server/chat/interceptors/document_file_interceptor.py,long method,1,positive,sample_pairs.csv
+private-gpt/private_gpt/server/chat/interceptors/document_file_interceptor.py,magic number,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/server/chat/interceptors/extract_citation_interceptor.py,long message chain,1,positive,sample_pairs.csv
+private-gpt/private_gpt/server/chat/interceptors/extract_citation_interceptor.py,long parameter list,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/server/chat/interceptors/extract_citation_interceptor.py,magic number,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/_deferred_capabilities.py,complex conditional,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/_deferred_capabilities.py,empty catch block,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/_deferred_capabilities.py,long statement,7,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/_deferred_capabilities.py,missing default,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/capabilities/_tool_search.py,long identifier,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/capabilities/_tool_search.py,long statement,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/capabilities/_tool_search.py,magic number,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_operation_backend.py,complex method,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_operation_backend.py,empty catch block,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_operation_backend.py,long message chain,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_operation_backend.py,long method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_operation_backend.py,long statement,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_operation_backend.py,missing default,2,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_dynamic_toolset.py,complex method,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_dynamic_toolset.py,long identifier,3,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_dynamic_toolset.py,long lambda function,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_dynamic_toolset.py,long message chain,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_dynamic_toolset.py,long method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_dynamic_toolset.py,magic number,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_mcp_toolset.py,complex method,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_mcp_toolset.py,long method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/embeddings/instrumented.py,complex conditional,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/embeddings/instrumented.py,complex method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/embeddings/instrumented.py,long method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/embeddings/instrumented.py,long parameter list,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/models/_tool_choice.py,complex method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/models/_tool_choice.py,long method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/gateway.py,empty catch block,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/gateway.py,long lambda function,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/gateway.py,long method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/gateway.py,magic number,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/gateway.py,missing default,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/google.py,long message chain,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/google.py,long method,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/_hosts.py,complex conditional,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/_hosts.py,empty catch block,2,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/api.py,complex conditional,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/api.py,complex method,0,negative,absence_in_full_dpy_output
+pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/api.py,long method,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/api.py,long parameter list,1,positive,sample_pairs.csv
+pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/api.py,magic number,3,positive,sample_pairs.csv
+python-sdk/src/mcp/server/auth/handlers/token.py,complex method,1,positive,sample_pairs.csv
+python-sdk/src/mcp/server/auth/handlers/token.py,long statement,3,positive,sample_pairs.csv
+python-sdk/src/mcp/server/auth/handlers/token.py,missing default,1,positive,sample_pairs.csv
+python-sdk/src/mcp/shared/path_security.py,complex conditional,0,negative,absence_in_full_dpy_output
+python-sdk/src/mcp/shared/path_security.py,complex method,0,negative,absence_in_full_dpy_output
+python-sdk/src/mcp/shared/path_security.py,long identifier,1,positive,sample_pairs.csv
+python-sdk/src/mcp/shared/path_security.py,long method,0,negative,absence_in_full_dpy_output
+python-sdk/src/mcp/shared/path_security.py,magic number,1,positive,sample_pairs.csv
+server/music_assistant/__main__.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/__main__.py,long lambda function,1,positive,sample_pairs.csv
+server/music_assistant/controllers/players/helpers.py,complex conditional,0,negative,absence_in_full_dpy_output
+server/music_assistant/controllers/players/helpers.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/controllers/players/helpers.py,long method,1,positive,sample_pairs.csv
+server/music_assistant/controllers/players/helpers.py,long parameter list,0,negative,absence_in_full_dpy_output
+server/music_assistant/controllers/players/helpers.py,long statement,4,positive,sample_pairs.csv
+server/music_assistant/controllers/players/helpers.py,magic number,1,positive,sample_pairs.csv
+server/music_assistant/helpers/json.py,empty catch block,1,positive,sample_pairs.csv
+server/music_assistant/helpers/json.py,long message chain,0,negative,absence_in_full_dpy_output
+server/music_assistant/helpers/json.py,magic number,0,negative,absence_in_full_dpy_output
+server/music_assistant/helpers/json.py,missing default,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/apple_music/helpers/browse.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/providers/apple_music/helpers/browse.py,long method,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/apple_music/helpers/browse.py,magic number,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/bose_soundtouch/player.py,complex conditional,2,positive,sample_pairs.csv
+server/music_assistant/providers/bose_soundtouch/player.py,long message chain,1,positive,sample_pairs.csv
+server/music_assistant/providers/bose_soundtouch/player.py,missing default,2,positive,sample_pairs.csv
+server/music_assistant/providers/fastmcp_server/tools/players.py,complex conditional,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/fastmcp_server/tools/players.py,long identifier,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/fastmcp_server/tools/players.py,long lambda function,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/fastmcp_server/tools/players.py,long method,1,positive,sample_pairs.csv
+server/music_assistant/providers/gpodder/__init__.py,long method,1,positive,sample_pairs.csv
+server/music_assistant/providers/gpodder/__init__.py,long parameter list,1,positive,sample_pairs.csv
+server/music_assistant/providers/gpodder/__init__.py,missing default,1,positive,sample_pairs.csv
+server/music_assistant/providers/lastfm_scrobble/__init__.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/providers/lastfm_scrobble/__init__.py,long lambda function,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/lastfm_scrobble/__init__.py,long message chain,1,positive,sample_pairs.csv
+server/music_assistant/providers/lastfm_scrobble/__init__.py,missing default,1,positive,sample_pairs.csv
+server/music_assistant/providers/musiccast/avt_helpers.py,complex method,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/musiccast/avt_helpers.py,long lambda function,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/musiccast/avt_helpers.py,long method,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/musiccast/avt_helpers.py,long parameter list,1,positive,sample_pairs.csv
+server/music_assistant/providers/musiccast/provider.py,complex conditional,1,positive,sample_pairs.csv
+server/music_assistant/providers/musiccast/provider.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/providers/musiccast/provider.py,empty catch block,1,positive,sample_pairs.csv
+server/music_assistant/providers/musiccast/provider.py,long lambda function,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/musiccast/provider.py,missing default,1,positive,sample_pairs.csv
+server/music_assistant/providers/nicovideo/services/video.py,long message chain,1,positive,sample_pairs.csv
+server/music_assistant/providers/nicovideo/services/video.py,magic number,1,positive,sample_pairs.csv
+server/music_assistant/providers/radio_playlist/__init__.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/providers/radio_playlist/__init__.py,empty catch block,1,positive,sample_pairs.csv
+server/music_assistant/providers/radio_playlist/__init__.py,long lambda function,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/radio_playlist/__init__.py,long method,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/radio_playlist/__init__.py,long parameter list,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/sendspin/synchronizer_role.py,long identifier,5,positive,sample_pairs.csv
+server/music_assistant/providers/sendspin/synchronizer_role.py,long message chain,1,positive,sample_pairs.csv
+server/music_assistant/providers/sendspin/synchronizer_role.py,long parameter list,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/sendspin/synchronizer_role.py,magic number,1,positive,sample_pairs.csv
+server/music_assistant/providers/sendspin_source/provider.py,complex conditional,1,positive,sample_pairs.csv
+server/music_assistant/providers/sendspin_source/provider.py,long method,1,positive,sample_pairs.csv
+server/music_assistant/providers/sendspin_source/provider.py,missing default,1,positive,sample_pairs.csv
+server/music_assistant/providers/siriusxm/streaming.py,complex method,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/siriusxm/streaming.py,empty catch block,1,positive,sample_pairs.csv
+server/music_assistant/providers/spotify/backends/librespot.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/providers/spotify/backends/librespot.py,long message chain,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/spotify_connect/setup_flow.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/providers/spotify_connect/setup_flow.py,long identifier,0,negative,absence_in_full_dpy_output
+server/music_assistant/providers/spotify_connect/setup_flow.py,long message chain,1,positive,sample_pairs.csv

@@ -1,0 +1,33 @@
+File,Smell,Count,Label,Source
+Cirq/cirq-core/cirq/ops/identity_test.py,complex method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/identity_test.py,long message chain,1,positive,sample_pairs.csv
+Cirq/cirq-core/cirq/ops/identity_test.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-core/cirq/ops/identity_test.py,long parameter list,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/study/finite_random_variable_test.py,long lambda function,1,positive,sample_pairs.csv
+Cirq/cirq-google/cirq_google/study/finite_random_variable_test.py,long method,0,negative,absence_in_full_dpy_output
+Cirq/cirq-google/cirq_google/study/finite_random_variable_test.py,missing default,0,negative,absence_in_full_dpy_output
+Cirq/cirq-web/cirq_web/circuits/symbols.py,empty catch block,1,positive,sample_pairs.csv
+Cirq/cirq-web/cirq_web/circuits/symbols.py,long identifier,1,positive,sample_pairs.csv
+Cirq/cirq-web/cirq_web/circuits/symbols.py,magic number,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/cost/cost_forecast.py,empty catch block,0,negative,absence_in_full_dpy_output
+bernstein/src/bernstein/core/cost/cost_forecast.py,long method,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/tools/e2b_sandbox.py,complex method,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/tools/e2b_sandbox.py,empty catch block,1,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/tools/e2b_sandbox.py,long identifier,2,positive,sample_pairs.csv
+dynamiq/dynamiq/nodes/tools/e2b_sandbox.py,long lambda function,0,negative,absence_in_full_dpy_output
+inspect_ai/src/inspect_ai/log/_recover/_api.py,long lambda function,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/log/_recover/_api.py,long message chain,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/util/_checkpoint/_host_egress.py,complex method,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/util/_checkpoint/_host_egress.py,empty catch block,1,positive,sample_pairs.csv
+inspect_ai/src/inspect_ai/util/_checkpoint/_host_egress.py,long method,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/emission/event_buffer.py,empty catch block,0,negative,absence_in_full_dpy_output
+parlant/src/parlant/core/emission/event_buffer.py,long identifier,1,positive,sample_pairs.csv
+parlant/src/parlant/core/emission/event_buffer.py,long parameter list,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/sandbox/local.py,complex conditional,0,negative,absence_in_full_dpy_output
+private-gpt/private_gpt/components/sandbox/local.py,long lambda function,1,positive,sample_pairs.csv
+server/music_assistant/controllers/players/helpers.py,complex conditional,0,negative,absence_in_full_dpy_output
+server/music_assistant/controllers/players/helpers.py,complex method,1,positive,sample_pairs.csv
+server/music_assistant/controllers/players/helpers.py,long method,1,positive,sample_pairs.csv
+server/music_assistant/controllers/players/helpers.py,long parameter list,0,negative,absence_in_full_dpy_output
+server/music_assistant/controllers/players/helpers.py,long statement,4,positive,sample_pairs.csv
+server/music_assistant/controllers/players/helpers.py,magic number,1,positive,sample_pairs.csv

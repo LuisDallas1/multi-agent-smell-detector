@@ -1,307 +1,304 @@
 Module,Smell,Count
-BaseProcess,Long Parameter List,1
-BaseProcess,Missing Default,1
-BashSandboxActionExecutor,Magic Number,2
-Blocks,Long Identifier,1
-CodeExecutionActionExecutor,Complex Method,3
-ContextSource,Complex Method,1
-ContextSource,Long Statement,1
-LandlockExecutionHelper,Long Message Chain,1
-ObserveBlock,Empty Catch Block,1
-ObserveBlock,Long Identifier,2
-Retrieval,Long Lambda Function,1
-RuntimePreflight,Long Identifier,2
-StreamingJSONParser,Long Method,3
-TaskBoardStrategy,Complex Conditional,1
-TaskContext,Complex Method,1
-__init__,Complex Conditional,1
-__init__,Long Statement,15
-__init__,Missing Default,3
-_agent,Complex Method,1
+AgentlyToolManager,Magic Number,1
+AgentlyToolManager,Missing Default,1
+FileIORegistry,Long Lambda Function,1
+ForEachProcess,Long Method,1
+MCPActionExecutor,Empty Catch Block,2
+RuntimeStorageSinkHooker,Empty Catch Block,1
+RuntimeStorageSinkHooker,Long Statement,1
+RuntimeStorageSinkHooker,Missing Default,1
+TaskDAGResolver,Long Message Chain,1
+__init__,Complex Method,2
+__init__,Empty Catch Block,2
+__init__,Long Message Chain,1
+__init__,Long Method,2
+__init__,Long Parameter List,1
+__init__,Long Statement,2
+__init__,Missing Default,2
+__main__,Complex Method,4
+__main__,Empty Catch Block,1
+__main__,Long Lambda Function,1
+__main__,Long Statement,7
+__main__,Magic Number,4
+_anthropic_batch,Complex Method,1
+_anthropic_batch,Missing Default,1
 _anthropic_citations,Complex Method,1
-_buffer,Long Message Chain,1
-_compat,Long Message Chain,1
-_convert,Long Parameter List,2
-_model,Long Method,1
-_openai_responses,Missing Default,2
-_openai_web_search,Long Identifier,1
-_operation_names,Missing Default,2
-_otel_emit,Empty Catch Block,1
-_text_utils,Long Statement,1
-_tool_with,Long Identifier,1
-a2a_consume,Complex Method,1
-abstract,Magic Number,2
-agent_acp_server,Long Parameter List,1
-agent_card_function_tool_validation,Empty Catch Block,3
-agent_card_loader,Long Parameter List,1
+_anthropic_citations,Long Method,1
+_anthropic_citations,Missing Default,2
+_api,Long Lambda Function,1
+_api,Long Message Chain,1
+_deferred_capabilities,Empty Catch Block,1
+_deferred_capabilities,Long Statement,7
+_dynamic_toolset,Long Identifier,3
+_dynamic_toolset,Long Method,1
+_host_egress,Complex Method,1
+_host_egress,Empty Catch Block,1
+_hosts,Complex Conditional,1
+_hosts,Empty Catch Block,2
+_mcp_toolset,Long Method,1
+_message,Missing Default,2
+_operation_backend,Long Method,1
+_operation_backend,Long Statement,1
+_operation_backend,Missing Default,2
+_tool_choice,Complex Method,1
+_tool_choice,Long Method,1
+_tool_search,Long Statement,1
+abstract_local_job_test,Long Message Chain,4
+action,Long Statement,1
+agent_profiling,Long Parameter List,1
+agent_trust,Long Message Chain,1
+agent_trust,Long Method,1
 agent_trust,Missing Default,1
-agents,Long Statement,1
-albums,Long Lambda Function,1
-anneal_test,Complex Method,1
-api_client,Long Identifier,2
-apply_unitary_protocol,Long Message Chain,1
-approve_cmd,Empty Catch Block,1
-archive,Magic Number,1
-arg_func_langs,Magic Number,1
-arg_func_langs_test,Magic Number,2
-asana_adapter,Complex Method,3
-base,Magic Number,1
-batch_api,Long Message Chain,1
+api,Long Method,1
+api,Long Parameter List,1
+api,Magic Number,3
+app,Magic Number,1
+avt_helpers,Long Parameter List,1
+background,Long Identifier,2
+batch_partial,Complex Method,1
+batch_partial,Empty Catch Block,1
+batch_router,Long Identifier,1
+batch_router,Long Method,1
+bench_toolcall_identity,Complex Conditional,1
 best_of_n,Long Lambda Function,1
-bootstrap,Long Message Chain,3
-capability_delta,Long Parameter List,1
-cascade_router,Complex Conditional,1
-check_manifests,Empty Catch Block,1
-checkpoint,Magic Number,1
-chroma,Long Parameter List,1
-classical_simulator,Complex Method,1
+best_of_n_rank_cmd,Complex Method,1
+best_of_n_rank_cmd,Long Parameter List,1
+best_of_n_rank_cmd,Long Statement,3
+blast_radius_cmd,Long Parameter List,1
+bom_cmd,Complex Method,1
+bom_cmd,Long Identifier,1
+bom_cmd,Long Parameter List,1
+browse,Complex Method,1
+cascade,Long Lambda Function,1
+cascade,Long Parameter List,2
+check_coverage_thresholds,Empty Catch Block,1
+check_coverage_thresholds,Long Method,1
+ci_router,Long Identifier,2
+ci_router,Long Parameter List,1
 claude_stream_parser,Missing Default,1
-clifford_tableau,Complex Conditional,2
-cluster,Long Parameter List,1
-cluster_cmd,Long Parameter List,1
-code_fence,Long Identifier,1
-common,Magic Number,1
-common_gates,Missing Default,1
-compile_pipeline,Magic Number,1
-condition,Magic Number,1
-config,Long Identifier,2
-constants,Long Identifier,1
-constants,Long Statement,2
-consumer,Long Method,1
-context,Complex Conditional,1
-context_recall,Long Method,1
-controller,Long Lambda Function,1
-conventions,Long Lambda Function,1
-conversation_summary,Complex Method,1
-convert_to_numpy_parameters,Long Message Chain,1
-core,Long Identifier,6
-council_runner,Long Method,2
-counts,Long Parameter List,1
-cpd,Long Method,1
-crt_effects,Empty Catch Block,1
-custom_guideline_matching_strategy,Long Statement,3
-dashboard_auth,Long Message Chain,3
-data_collection,Long Identifier,1
-daytona_sandbox,Long Parameter List,1
-debug_bundle,Empty Catch Block,5
-deepinfra,Long Statement,1
-deepseek,Long Identifier,1
-default_clifford,Long Method,1
-defer_measurements,Long Method,1
-deferred_loading,Long Statement,1
-diagonal_optimization,Complex Method,1
-direct_sources,Missing Default,1
-discovery,Empty Catch Block,1
-docs,Magic Number,1
-document_database,Long Identifier,1
-eject_phased_paulis,Complex Conditional,1
-elicitation_form,Long Message Chain,1
+claude_wrapper_script,Long Parameter List,1
+clifford_decomposition,Complex Method,1
+clifford_decomposition,Long Identifier,1
+clifford_optimize,Complex Conditional,1
+clifford_optimize,Complex Method,1
+clifford_optimize,Long Method,1
+compaction_cmd,Complex Method,1
+compaction_cmd,Long Parameter List,1
+completions,Long Message Chain,1
+computer_tool,Missing Default,1
+conn_cmd,Long Parameter List,1
+content,Long Statement,3
+context_variables,Complex Method,1
+control_cells,Long Lambda Function,2
+cost_forecast,Long Method,1
+cost_reporter,Long Parameter List,3
+coupler_pulse,Long Parameter List,1
+creds_cmd,Long Lambda Function,1
+dashboard,Complex Conditional,1
+dashboard,Long Message Chain,1
+demo_article12_export,Long Method,1
+demo_article12_export,Long Statement,8
+demo_article12_export,Magic Number,1
+document_file_interceptor,Long Identifier,2
+document_file_interceptor,Long Message Chain,1
+document_file_interceptor,Long Method,1
+e2b_sandbox,Complex Method,1
+e2b_sandbox,Empty Catch Block,1
+e2b_sandbox,Long Identifier,2
+eigvals,Empty Catch Block,1
 engine,Long Lambda Function,4
-engine,Missing Default,1
-engine_client,Long Message Chain,1
-engine_job,Empty Catch Block,1
-ensure_tools_are_flatten_interceptor,Complex Method,1
-entity_extractor,Empty Catch Block,1
-entropy_test,Magic Number,1
-env,Long Statement,1
-environment_config,Magic Number,2
-evolve_cmd,Long Method,1
-export_cmd,Long Statement,2
-extension,Long Identifier,1
-extract,Long Statement,1
-extract_citation_interceptor,Long Method,1
-extraction_tasks,Long Lambda Function,1
-fades,Complex Method,1
-fallback,Long Method,2
-feedback,Missing Default,1
-filesystem,Empty Catch Block,2
-filesystem_runtime_protocol,Long Statement,1
+engine,Long Parameter List,4
+evaluation,Magic Number,1
+event_buffer,Long Identifier,1
+events,Long Statement,3
+export,Complex Conditional,1
+export,Long Parameter List,1
+extract_citation_interceptor,Long Message Chain,1
+failure,Complex Conditional,1
+filesystem_runtime_base,Complex Conditional,1
+filesystem_toolset_factory,Long Statement,1
 finite_random_variable_test,Long Lambda Function,1
-first_quantization,Complex Method,3
-fsim_gate,Complex Conditional,1
-fsim_gate_family,Complex Conditional,1
-fsim_gate_test,Long Method,2
-gate,Missing Default,1
-gauge_compiling_test_utils_test,Long Statement,2
-generic_guideline_matching_strategy,Long Method,1
+formatter,Empty Catch Block,2
+gateway,Empty Catch Block,1
+gateway,Long Lambda Function,1
+gateway,Long Method,1
+generate_config_args,Missing Default,1
+git_env_tools,Empty Catch Block,1
 global_phase_op,Complex Conditional,1
 google,Long Message Chain,1
+gpt,Long Statement,2
 graduation,Missing Default,1
-graphify_code_graph,Long Method,1
+graphql_api,Long Message Chain,1
 graphql_api,Missing Default,1
-guideline_actionable_batch,Long Parameter List,2
-gw_client,Long Parameter List,1
-harness_tools,Long Message Chain,1
-helpers,Long Statement,1
-http,Empty Catch Block,3
-huggingface_router_profiles,Complex Method,1
-huggingface_sandbox_environment,Long Lambda Function,1
+hatch_build,Empty Catch Block,1
+hatch_build,Long Identifier,2
+hatch_build,Long Method,1
+hatch_build,Long Statement,3
+helpers,Complex Method,3
+helpers,Long Lambda Function,1
+helpers,Long Method,1
+helpers,Long Statement,4
+helpers,Magic Number,1
+hooks,Long Statement,3
+hooks,Missing Default,1
+hugging_face,Long Identifier,1
+hugging_face,Long Parameter List,1
+hugging_face,Magic Number,2
+identity_test,Long Message Chain,1
+image_renderer,Long Parameter List,1
 image_renderer,Missing Default,1
-import_test,Complex Method,1
-incremental_coverage_test,Long Identifier,1
-input_refusal,Complex Conditional,1
-input_rotation_cells,Long Lambda Function,1
-input_rotation_cells_test,Long Method,1
-interactive_prompt,Long Parameter List,1
+instruction_utils,Long Message Chain,3
+instrumented,Complex Method,1
+instrumented,Long Method,1
 interface_utils,Missing Default,1
 ionq_gateset,Long Lambda Function,1
-ionq_native_target_gateset,Long Lambda Function,1
-journal,Complex Conditional,1
-journal_export,Long Method,1
-journey_backtrack_check,Complex Conditional,1
-journey_backtrack_check,Long Lambda Function,1
-journey_guideline_projection,Long Method,1
-journey_node_selection_batch,Empty Catch Block,1
-json_rpc_methods,Missing Default,1
+iqp,Long Identifier,2
+iqp,Long Statement,5
+iqp,Magic Number,1
+json,Empty Catch Block,1
+json_parser,Complex Conditional,1
+json_parser,Empty Catch Block,2
 leaderboard,Long Lambda Function,1
-legacy_facade,Empty Catch Block,1
-line_initial_mapper,Magic Number,1
-line_test,Magic Number,1
-llm,Long Identifier,2
+librespot,Complex Method,1
+line_initial_mapper_test,Long Message Chain,2
 llm,Long Lambda Function,1
-llm_openrouter,Long Statement,1
-maker_agent,Missing Default,1
-managed_pool,Long Lambda Function,1
-manager,Complex Conditional,1
-manager,Complex Method,1
-manager,Long Method,1
-mappers,Long Parameter List,3
+local,Long Lambda Function,1
+locking,Complex Conditional,1
+locking,Empty Catch Block,2
+locking,Magic Number,2
+main,Empty Catch Block,1
+main,Missing Default,1
+manager,Missing Default,1
+markdown_normalization_transform,Complex Conditional,1
+markdown_normalization_transform,Long Identifier,1
 marketplace,Complex Conditional,1
-mcp,Long Method,1
-mcp_display,Long Method,1
-mcp_gateway,Complex Conditional,1
-mcp_sandbox,Empty Catch Block,1
-measures,Complex Conditional,1
-media_resolver,Long Method,2
-merge_rotations,Long Method,1
-merge_single_qubit_gates,Long Lambda Function,1
-milvus,Long Parameter List,1
-milvus,Long Statement,4
-model_database,Empty Catch Block,1
-model_picker,Long Method,1
-models_manager,Long Message Chain,1
-molecule,Long Parameter List,1
-moment,Empty Catch Block,1
-mps,Long Identifier,1
-multipart_converter_bedrock,Long Identifier,2
+matrix,Long Message Chain,1
+mlir_specs,Long Identifier,3
+mlir_specs,Long Method,1
+mlir_specs,Long Parameter List,1
+model_picker_proto_dialogs,Long Method,1
+mutation_utils_test,Long Identifier,3
 mutation_utils_test,Long Lambda Function,1
-observable_measurement_data,Complex Conditional,1
-observable_measurement_data,Long Message Chain,1
-op_serializer,Complex Method,1
-operands,Empty Catch Block,1
+mutation_utils_test,Long Method,1
+mutation_utils_test,Long Statement,9
+mutation_utils_test,Magic Number,3
+openai_completions,Long Parameter List,1
+openai_completions,Magic Number,1
+openrouter_service,Complex Method,2
+openrouter_service,Long Lambda Function,1
+openrouter_service,Long Method,1
 operators,Long Lambda Function,1
-optimization,Complex Method,1
-optimization_pass,Complex Method,1
+operators,Long Parameter List,1
+optimization_pass_test,Long Lambda Function,1
+optimization_pass_test,Magic Number,1
 optimization_utils,Complex Conditional,1
-orchestrator_config,Empty Catch Block,1
-parsers,Complex Method,2
-parsers,Long Parameter List,1
-pasqal_qubits,Long Parameter List,1
-path_containment,Complex Method,1
-pauli_string,Missing Default,1
-pauli_string_test,Long Method,1
-permission_store,Magic Number,2
-pgvector,Magic Number,1
-playback,Magic Number,3
-player,Complex Conditional,1
-playwright_page_crawler,Long Message Chain,1
-post_user_turn,Complex Method,1
-predictive,Long Message Chain,2
-preview,Long Statement,2
-process_poll_fold_audit,Complex Method,1
-promotion,Long Identifier,8
-protocols,Long Identifier,2
+optimization_utils,Magic Number,7
+optimize_for_target_gateset,Complex Conditional,1
+orchestrator_summary,Long Method,1
+orchestrator_summary,Long Parameter List,1
+path_security,Long Identifier,1
+path_security,Magic Number,1
+player,Complex Conditional,2
+player,Long Message Chain,1
+player,Missing Default,2
+players,Long Method,1
+present_files_tool_builder,Complex Conditional,1
+processor_sampler,Complex Conditional,1
+processor_sampler,Complex Method,1
+provider,Complex Conditional,2
+provider,Complex Method,1
 provider,Empty Catch Block,1
-provider,Missing Default,3
-providers,Complex Conditional,1
-qdrant,Long Parameter List,1
-quantum_runtime,Complex Method,1
-quantum_volume,Long Lambda Function,1
+provider,Long Method,1
+provider,Missing Default,2
+qcs_notebook,Complex Method,1
+qcs_notebook,Long Identifier,2
+qcs_notebook_test,Long Message Chain,2
+qft,Long Statement,1
 qubit_management_transformers,Complex Method,1
-qubit_manager_test,Long Identifier,2
+qubit_management_transformers,Long Method,1
 qubit_placement_test,Long Message Chain,1
-qudit_expval_functions,Complex Method,1
-receipt,Long Statement,7
-receiver_commands,Long Identifier,1
-redis_stream_service,Empty Catch Block,1
-redis_stream_service,Long Identifier,3
-refinement_loop,Long Method,1
 registry_urls,Long Lambda Function,1
-reporters,Long Statement,1
-request_logging,Long Message Chain,1
-resource,Missing Default,1
-resource_operator,Complex Conditional,1
-retrospective,Complex Conditional,1
-review_task,Magic Number,5
-route_decision,Long Parameter List,3
+request_builder,Complex Method,1
+request_builder,Long Identifier,3
+request_builder,Long Method,1
+review_consensus,Long Lambda Function,1
+review_responder_cmd,Long Identifier,1
+review_responder_cmd,Long Parameter List,1
+roadmap_runtime,Complex Method,1
+roadmap_runtime,Empty Catch Block,3
+roadmap_runtime,Long Parameter List,1
+roadmap_runtime,Magic Number,1
+role_classifier,Long Method,1
+rotoselect,Long Identifier,1
+rotoselect,Long Lambda Function,1
 router_policies,Long Lambda Function,1
-rpc_client,Long Statement,3
-runner,Long Identifier,3
+run_closure,Complex Conditional,1
+run_closure_owner,Complex Conditional,2
+run_context_test,Long Method,1
+runner,Long Message Chain,2
 runner,Magic Number,1
 runtime_call,Empty Catch Block,1
-runtime_model_interceptor,Magic Number,1
-sagemaker,Complex Conditional,1
-sandbox,Long Method,1
-schedule_kinds,Magic Number,1
+runtime_call,Long Identifier,1
+runtime_call,Long Parameter List,1
+runtime_estimator_test,Long Parameter List,1
+s3_monitor,Long Identifier,2
+s3_monitor,Magic Number,1
+scenario_library,Complex Conditional,1
 security_posture,Missing Default,1
-serial,Long Statement,3
-serve,Complex Method,1
-server,Long Message Chain,1
-server,Long Parameter List,1
-session_runtime,Long Message Chain,2
-setup_flow,Long Message Chain,2
-shots,Long Statement,1
-sla_eval,Long Method,1
-snowflake_cortex_service,Complex Method,1
-sort_list,Long Lambda Function,1
-span_tree,Long Message Chain,1
-sparse_simulator,Long Statement,10
-spec,Long Statement,2
-specs,Empty Catch Block,2
+select_pauli_rot,Long Identifier,2
+select_pauli_rot,Missing Default,1
+semantic_cache,Long Lambda Function,2
+server_middleware,Complex Conditional,1
+set_variable_op,Complex Method,1
+set_variable_op,Long Message Chain,1
+setup_flow,Complex Method,1
+setup_flow,Long Message Chain,1
+side_query,Complex Conditional,1
+side_query,Long Parameter List,1
+skill,Complex Conditional,1
+spec,Long Statement,1
+special_commands,Missing Default,1
 split_subtrees,Complex Conditional,1
-start,Long Parameter List,1
-stateless_core,Magic Number,9
-stats,Long Identifier,1
-status_cmd,Long Parameter List,3
-streaming,Long Message Chain,1
-structured_tools_probe,Long Method,1
+split_subtrees,Complex Method,1
+streaming,Empty Catch Block,1
 subagent_transcript,Complex Conditional,1
+suggest_docs,Empty Catch Block,3
+suggest_docs,Long Identifier,1
 suggest_docs,Long Message Chain,1
 superposition_thc,Long Lambda Function,1
-synchronize_terminal_measurements,Complex Conditional,1
-tap,Complex Conditional,1
-task_cmd,Long Message Chain,1
-term_extractor,Magic Number,2
-terminal_caps,Magic Number,2
-test_impact,Complex Conditional,1
-thread_executor,Long Statement,1
-tldr_processor,Long Parameter List,1
+sycamore_gateset,Long Lambda Function,1
+sycamore_gateset,Magic Number,1
+symbols,Empty Catch Block,1
+symbols,Long Identifier,1
+synchronizer_role,Long Identifier,5
+synchronizer_role,Long Message Chain,1
+synchronizer_role,Magic Number,1
+task_claim_receipt,Long Identifier,4
+task_claim_receipt,Long Method,1
+tiktoken,Empty Catch Block,2
+token,Complex Method,1
+token,Long Statement,3
 token,Missing Default,1
-tool_manager,Long Parameter List,1
-trace_store,Complex Conditional,1
-tracker_pipeline,Complex Conditional,1
-transformer_api,Long Lambda Function,1
-transformer_primitives,Long Lambda Function,2
-transformer_primitives_test,Long Lambda Function,1
-transport,Empty Catch Block,4
-truncation,Long Parameter List,1
-tutorial001,Long Statement,2
-tutorial004,Long Statement,1
-two_qubit_to_sqrt_iswap,Complex Method,1
-unconstrained_device_test,Long Statement,1
-uniform_superposition_gate,Complex Method,1
+token_cmd,Complex Method,2
+token_cmd,Long Message Chain,1
+token_cmd,Long Method,1
+token_cmd,Magic Number,7
+toolcall_identity,Complex Conditional,2
+tui,Long Method,1
+types,Long Statement,1
+undo_cmd,Complex Conditional,1
+upgrade_executor,Long Parameter List,1
 upgrade_executor,Missing Default,1
-utils,Complex Conditional,1
-utils,Missing Default,1
-v2_store,Long Method,1
-verdict,Long Message Chain,1
-verification_check_run,Complex Conditional,1
-version,Long Identifier,3
-vjp,Long Parameter List,1
-vscode,Long Identifier,1
-web_fetch,Complex Method,1
-web_fetch,Long Identifier,1
-web_scraper_service,Long Message Chain,2
-web_search_processor,Long Identifier,1
-webhooks,Missing Default,1
-writer,Long Parameter List,1
+vector_artifact_index,Long Parameter List,1
+verify_server,Magic Number,1
+vertex,Long Message Chain,1
+video,Long Message Chain,1
+video,Magic Number,1
+workflow_importer,Complex Method,1
+workflow_importer,Long Identifier,3
+workflow_importer,Long Parameter List,1
+worktrees_cmd,Long Lambda Function,1
+xml_field,Long Method,1
+xml_field,Magic Number,2
+zipfile,Long Statement,3
+zipfile,Magic Number,1

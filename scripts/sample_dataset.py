@@ -225,7 +225,8 @@ def select_files(files: dict, quotas: dict, rng: random.Random, pool_per_smell: 
 
 
 def select_per_smell(files: dict, quotas: dict, rng: random.Random, max_share: float,
-                     cell_quotas: dict, proj_caps: dict):
+                     cell_quotas: dict, proj_caps: dict, reuse: bool = False,
+                     n_lines: dict = None, prefer_small: bool = False, size_target: float = None):
     """Escolhe pares (arquivo, smell) por celula (smell x projeto).
     `proj_caps[k]`: teto duro de ocorrencias do smell k em um unico projeto; nenhuma etapa
     o ultrapassa. Se uma celula nao fecha a cota (faltam candidatos), o deficit e repassado
@@ -235,7 +236,25 @@ def select_per_smell(files: dict, quotas: dict, rng: random.Random, max_share: f
         by_proj.setdefault(project_of(r), {})[r] = files[r]
 
     assign, totals = {}, Counter()
-    for k in KEYS:
+    picked = set()  # arquivos ja escolhidos para algum smell (so conta com reuse=True)
+    if reuse:  # raros primeiro: tem poucos candidatos; os comuns reaproveitam os arquivos deles
+        order = sorted(KEYS, key=lambda k: (sum(1 for c in files.values() if c[k] > 0), KEYS.index(k)))
+    else:
+        order = KEYS
+
+    def size_key(r):
+        if not n_lines:
+            return 0
+        if prefer_small:
+            return n_lines[r]
+        if size_target:  # distancia (em escala log) ao tamanho alvo
+            return abs(math.log(max(n_lines[r], 1) / size_target))
+        return 0
+
+    def prio(r):  # menor = tentado antes. sort estavel; sem as flags e constante (nada muda)
+        return (0 if (reuse and r in picked) else 1, size_key(r))
+
+    for k in order:
         pcap = proj_caps[k]
         fcap_k = max(1, math.ceil(quotas[k] * max_share))  # teto por arquivo
         chosen, tp = {}, {}
@@ -246,6 +265,7 @@ def select_per_smell(files: dict, quotas: dict, rng: random.Random, max_share: f
             cap = max(1, min(fcap_k, q))
             cands = sorted(r for r, c in sub.items() if 0 < c[k] <= cap)
             rng.shuffle(cands)
+            cands.sort(key=prio)
             got, t = [], 0
             for r in cands:
                 if t >= q:
@@ -260,7 +280,7 @@ def select_per_smell(files: dict, quotas: dict, rng: random.Random, max_share: f
                     if 0 < c[k] <= cap and r not in used
                 ]
                 rng.shuffle(rest)
-                rest.sort(key=lambda r: sub[r][k])  # estável: empates ficam na ordem sorteada
+                rest.sort(key=lambda r: prio(r) + (sub[r][k],))  # estável: empates ficam na ordem sorteada
                 for r in rest:
                     if t >= q:
                         break
@@ -279,6 +299,7 @@ def select_per_smell(files: dict, quotas: dict, rng: random.Random, max_share: f
                 used = set(chosen.get(p, []))
                 c = [r for r in sorted(by_proj[p]) if r not in used and 0 < by_proj[p][r][k] <= fcap_k]
                 rng.shuffle(c)
+                c.sort(key=prio)
                 unused[p] = c
             while deficit > 0:
                 best = None
@@ -304,6 +325,7 @@ def select_per_smell(files: dict, quotas: dict, rng: random.Random, max_share: f
                 deficit -= by_proj[p][r][k]
 
         assign[k] = sorted(r for v in chosen.values() for r in v)
+        picked.update(assign[k])
         totals[k] = sum(tp.values())
     return assign, totals
 
@@ -315,18 +337,27 @@ def file_loc(path: Path):
     return len(lines), sloc
 
 
+def loc_dist(v):
+    """Resumo da distribuicao de LOC por arquivo."""
+    a = np.asarray(list(v), dtype=float)
+    if a.size == 0:
+        return {}
+    return {"n": int(a.size), "mean": round(float(a.mean()), 1), "median": round(float(np.median(a)), 1),
+            "p90": round(float(np.percentile(a, 90)), 1), "min": int(a.min()), "max": int(a.max())}
+
+
 def project_of(rel: str) -> str:
     return rel.split("/")[0] if "/" in rel else "(raiz)"
 
 
-def read_valid(path: Path):
+def read_valid(path: Path, max_lines: int = MAX_FILE_LINES):
     """Retorna n_linhas se o arquivo e utilizavel pelo supervisor, senao None."""
     try:
         text = path.read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError):
         return None
     n = len(text.split("\n"))
-    if n > MAX_FILE_LINES or len(text.encode("utf-8")) / 1024 > MAX_FILE_SIZE_KB:
+    if n > max_lines or len(text.encode("utf-8")) / 1024 > MAX_FILE_SIZE_KB:
         return None
     return n
 
@@ -360,11 +391,25 @@ def main():
     ap.add_argument("--negatives", type=int, default=0,
                     help="arquivos sem nenhum smell no DPy a incluir")
     ap.add_argument("--min-lines", type=int, default=20,
-                    help="tamanho minimo (linhas) dos arquivos negativos")
+                    help="tamanho minimo (linhas) de TODOS os arquivos candidatos (com e sem smell). "
+                    "Use 0 para desligar")
     ap.add_argument("--quotas", type=Path,
                     help='JSON opcional com cotas fixas, ex: {"Magic number": 50}')
     ap.add_argument("--jitter", type=float, default=0.6,
                     help="per-smell: variacao aleatoria (por seed) nas cotas por projeto; 0 = determinístico")
+    ap.add_argument("--reuse-files", action="store_true",
+                    help="per-smell: processa smells do mais raro ao mais comum e prefere arquivos ja "
+                    "escolhidos para outro smell (menos arquivos para as mesmas cotas)")
+    ap.add_argument("--prefer-small", action="store_true",
+                    help="per-smell: entre candidatos equivalentes, prefere arquivos menores (menos LOC)")
+    ap.add_argument("--prefer-loc", default=None, metavar="N|median|mean",
+                    help="per-smell: entre candidatos equivalentes, prefere arquivos com LOC proximo a N "
+                    "(ou a mediana/media da populacao). Excludente com --prefer-small")
+    ap.add_argument("--seed-search", type=int, default=1, metavar="K",
+                    help="per-smell: testa K seeds (seed, seed+1, ...) e fica com a que deixa media/mediana/p90 "
+                    "de LOC mais proximas da populacao. Reproduza depois com --seed <escolhida>")
+    ap.add_argument("--max-lines", type=int, default=MAX_FILE_LINES,
+                    help="descarta arquivos com mais linhas que isso (padrao: limite do supervisor)")
     args = ap.parse_args()
     if not args.dpy_csv and not args.dpy_json:
         args.dpy_json = [BASE / "results" / "dpy" / "jsons"]
@@ -435,16 +480,22 @@ def main():
     counts_df = df.groupby(["rel", "key"]).size().unstack(fill_value=0).reindex(columns=KEYS, fill_value=0)
 
     # ---------- 2. filtra arquivos que o supervisor aceitaria ----------
-    files, invalid = {}, 0
+    files, n_lines, invalid, too_small = {}, {}, 0, 0
     for rel in sorted(counts_df.index):
-        if read_valid(args.root / rel) is None:
+        n = read_valid(args.root / rel, args.max_lines)
+        if n is None:
             invalid += 1
             continue
+        if n < args.min_lines:
+            too_small += 1
+            continue
+        n_lines[rel] = n
         files[rel] = {k: int(counts_df.loc[rel, k]) for k in KEYS}
 
     print(f"Arquivos .py em --root: {len(rel_set)} | com smell no DPy: {len(counts_df)} | utilizaveis: {len(files)}")
     print(f"  arquivos do CSV sem correspondente em --root: {n_unmatched}")
     print(f"  invalidos (muito grandes / encoding): {invalid}")
+    print(f"  pequenos demais (< {args.min_lines} linhas, --min-lines): {too_small}")
 
     avail = {k: sum(c[k] for c in files.values()) for k in KEYS}
     if args.quotas:
@@ -453,104 +504,147 @@ def main():
     else:
         quotas = compute_quotas(args.total, avail, args.min_per_smell)
 
-    # ---------- 3. selecao (seed fixa) ----------
-    rng = random.Random(args.seed)
-    pairs = set()
-    cell_quotas = None
-    if args.select_mode == "per-smell":
-        # projetos calculados ANTES de adicionar negativos (so arquivos com smell)
-        projects = sorted({project_of(r) for r in files})
-        cell_quotas = project_quotas(files, quotas, projects, rng, args.jitter,
-                                     args.max_project_share)
-        proj_caps, _ = project_caps(project_matrix(files, projects), quotas, args.max_project_share)
-        assign, totals = select_per_smell(files, quotas, rng, args.max_file_share, cell_quotas,
-                                          proj_caps)
-        pairs = {(r, k) for k, rels_k in assign.items() for r in rels_k}
-        selected = sorted({r for r, _ in pairs})
-        if args.negatives:
-            print("AVISO: --negatives nao e usado no modo per-smell (ignorado).")
-            args.negatives = 0
-    else:
-        selected, totals = select_files(files, quotas, rng, args.pool_per_smell, args.select_mode)
+    # ---------- 3. selecao (seed fixa; --seed-search tenta varias seeds) ----------
+    if args.seed_search > 1 and args.select_mode != "per-smell":
+        raise SystemExit("--seed-search so funciona no modo per-smell.")
+    if args.prefer_loc and args.prefer_small:
+        raise SystemExit("--prefer-loc e --prefer-small sao excludentes.")
+    pop_ref = loc_dist([n_lines[r] for r in files])
+    size_target = None
+    if args.prefer_loc:
+        size_target = {"median": pop_ref["median"], "mean": pop_ref["mean"]}.get(args.prefer_loc) \
+            or float(args.prefer_loc)
+        print(f"Alvo de tamanho (--prefer-loc): {size_target:.0f} linhas")
+    seeds = [args.seed + i for i in range(max(1, args.seed_search))]
+    cands = []
+    for cur_seed in seeds:
+        rng = random.Random(cur_seed)
+        pairs = set()
+        cell_quotas = None
+        if args.select_mode == "per-smell":
+            # projetos calculados ANTES de adicionar negativos (so arquivos com smell)
+            projects = sorted({project_of(r) for r in files})
+            cell_quotas = project_quotas(files, quotas, projects, rng, args.jitter,
+                                         args.max_project_share)
+            proj_caps, _ = project_caps(project_matrix(files, projects), quotas, args.max_project_share)
+            assign, totals = select_per_smell(files, quotas, rng, args.max_file_share, cell_quotas,
+                                              proj_caps, reuse=args.reuse_files, n_lines=n_lines,
+                                              prefer_small=args.prefer_small, size_target=size_target)
+            pairs = {(r, k) for k, rels_k in assign.items() for r in rels_k}
+            selected = sorted({r for r, _ in pairs})
+            if args.negatives:
+                print("AVISO: --negatives nao e usado no modo per-smell (ignorado).")
+                args.negatives = 0
+        else:
+            selected, totals = select_files(files, quotas, rng, args.pool_per_smell, args.select_mode)
 
-    # ---------- 3.1 validacao da selecao ----------
-    validation_errors = []
+        # ---------- 3.1 validacao da selecao ----------
+        validation_errors = []
 
-    total_obtained = sum(totals.values())
-    if total_obtained != args.total:
-        validation_errors.append(
-            f"total obtido {total_obtained} != alvo {args.total}"
-        )
-
-    quota_errors = []
-    for k in KEYS:
-        if totals[k] != quotas[k]:
-            quota_errors.append((k, quotas[k], totals[k]))
-
-    if quota_errors:
-        for k, expected, obtained in quota_errors:
+        total_obtained = sum(totals.values())
+        if total_obtained != args.total:
             validation_errors.append(
-                f"{k}: cota {expected}, obtido {obtained}"
+                f"total obtido {total_obtained} != alvo {args.total}"
             )
 
-    file_cap_violations = []
-    file_cap_summary = []
-
-    if args.select_mode == "per-smell":
+        quota_errors = []
         for k in KEYS:
-            cap = math.ceil(quotas[k] * args.max_file_share)
+            if totals[k] != quotas[k]:
+                quota_errors.append((k, quotas[k], totals[k]))
 
-            selected_for_smell = [
-                (r, files[r][k])
-                for r, smell in pairs
-                if smell == k
-            ]
+        if quota_errors:
+            for k, expected, obtained in quota_errors:
+                validation_errors.append(
+                    f"{k}: cota {expected}, obtido {obtained}"
+                )
 
-            max_contribution = max(
-                (value for _, value in selected_for_smell),
-                default=0
-            )
+        file_cap_violations = []
+        file_cap_summary = []
 
-            max_file = next(
-                (r for r, value in selected_for_smell
-                 if value == max_contribution),
-                None
-            )
+        if args.select_mode == "per-smell":
+            for k in KEYS:
+                cap = math.ceil(quotas[k] * args.max_file_share)
 
-            file_cap_summary.append({
-                "smell": k,
-                "quota": quotas[k],
-                "cap": cap,
-                "max_contribution": max_contribution,
-                "max_file": max_file,
-            })
+                selected_for_smell = [
+                    (r, files[r][k])
+                    for r, smell in pairs
+                    if smell == k
+                ]
 
-            for r, contribution in selected_for_smell:
-                if contribution > cap:
-                    file_cap_violations.append({
-                        "smell": k,
-                        "file": r,
-                        "contribution": contribution,
-                        "cap": cap,
-                    })
+                max_contribution = max(
+                    (value for _, value in selected_for_smell),
+                    default=0
+                )
 
-        if file_cap_violations:
-            validation_errors.append(
-                f"{len(file_cap_violations)} violacao(oes) do limite por arquivo"
-            )
+                max_file = next(
+                    (r for r, value in selected_for_smell
+                     if value == max_contribution),
+                    None
+                )
 
-    if validation_errors:
-        print("\nERRO: selecao invalida")
-        for error in validation_errors:
-            print(f"  {error}")
+                file_cap_summary.append({
+                    "smell": k,
+                    "quota": quotas[k],
+                    "cap": cap,
+                    "max_contribution": max_contribution,
+                    "max_file": max_file,
+                })
 
-        if file_cap_violations:
-            print("\nViolacoes do limite por arquivo:")
-            for v in file_cap_violations:
-                print(f"  {v['smell']:<22}{v['file']:<55}"
-                      f"{v['contribution']:>4} > {v['cap']}")
+                for r, contribution in selected_for_smell:
+                    if contribution > cap:
+                        file_cap_violations.append({
+                            "smell": k,
+                            "file": r,
+                            "contribution": contribution,
+                            "cap": cap,
+                        })
 
-        raise SystemExit("Seed rejeitada.")
+            if file_cap_violations:
+                validation_errors.append(
+                    f"{len(file_cap_violations)} violacao(oes) do limite por arquivo"
+                )
+
+        if validation_errors and len(seeds) > 1:
+            print(f"  seed {cur_seed}: rejeitada ({len(validation_errors)} erro(s))")
+            continue
+        if validation_errors:
+            print("\nERRO: selecao invalida")
+            for error in validation_errors:
+                print(f"  {error}")
+
+            if file_cap_violations:
+                print("\nViolacoes do limite por arquivo:")
+                for v in file_cap_violations:
+                    print(f"  {v['smell']:<22}{v['file']:<55}"
+                          f"{v['contribution']:>4} > {v['cap']}")
+
+            raise SystemExit("Seed rejeitada.")
+
+        if len(seeds) > 1:
+            sd = loc_dist([n_lines[r] for r in selected])
+            score = sum(abs(math.log(sd[k] / pop_ref[k])) for k in ("mean", "median", "p90"))
+            cands.append({"seed": cur_seed, "score": score, "files": len(selected), "pairs": len(pairs),
+                          "loc": sum(n_lines[r] for r in selected), "sd": sd,
+                          "state": (selected, pairs, totals, cell_quotas, file_cap_summary,
+                                    file_cap_violations, total_obtained, quota_errors, assign, proj_caps)})
+
+    seed_search_info = None
+    if len(seeds) > 1:
+        if not cands:
+            raise SystemExit("Nenhuma seed valida no intervalo testado.")
+        cands.sort(key=lambda c: c["score"])
+        print(f"\nBusca de seed: {len(cands)}/{len(seeds)} validas. Melhores (LOC media/mediana/p90 vs populacao):")
+        print(f"{'seed':>10}{'arqs':>6}{'pares':>7}{'LOC':>9}{'media':>8}{'mediana':>9}{'p90':>8}{'score':>8}")
+        for c in cands[:5]:
+            print(f"{c['seed']:>10}{c['files']:>6}{c['pairs']:>7}{c['loc']:>9}{c['sd']['mean']:>8}"
+                  f"{c['sd']['median']:>9}{c['sd']['p90']:>8}{c['score']:>8.3f}")
+        print(f"{'populacao':>10}{'':>22}{pop_ref['mean']:>8}{pop_ref['median']:>9}{pop_ref['p90']:>8}")
+        best = cands[0]
+        (selected, pairs, totals, cell_quotas, file_cap_summary, file_cap_violations,
+         total_obtained, quota_errors, assign, proj_caps) = best["state"]
+        args.seed = best["seed"]
+        seed_search_info = {"tried": len(seeds), "valid": len(cands), "score": round(best["score"], 4)}
+        print(f"Escolhida: --seed {args.seed} (reproduza com essa seed, sem --seed-search)\n")
 
     # Negativos: .py validos, sem nenhuma linha no DPy (nao sao __init__ nem minusculos)
     n_neg = 0
@@ -559,7 +653,7 @@ def main():
         for rel in sorted(rel_set - set(counts_df.index)):
             if rel.endswith("__init__.py"):
                 continue
-            n = read_valid(args.root / rel)
+            n = read_valid(args.root / rel, args.max_lines)
             if n is not None and n >= args.min_lines:
                 clean.append(rel)
         rng.shuffle(clean)
@@ -638,8 +732,11 @@ def main():
     # ---------- 5. estatisticas: LOC e origem por projeto ----------
     projects = sorted({project_of(r) for r in rel_set})
     st = {pj: {"files": 0, "loc": 0, "sloc": 0, "smells": 0, **{k: 0 for k in KEYS}} for pj in projects}
+    loc_by_file, bytes_by_file = {}, {}
     for rel in selected:
         loc, sloc = file_loc(args.root / rel)
+        loc_by_file[rel] = loc
+        bytes_by_file[rel] = (args.root / rel).stat().st_size
         d = st[project_of(rel)]
         d["files"] += 1
         d["loc"] += loc
@@ -648,9 +745,13 @@ def main():
             if not pairs or (rel, k) in pairs:  # per-smell: so os pares sorteados contam
                 d[k] += files[rel][k]
                 d["smells"] += files[rel][k]
-    av_files, av_smells = Counter(), Counter()
+    av_files, av_smells, av_loc = Counter(), Counter(), Counter()
+    pop_loc = []  # LOC de cada arquivo da populacao (com smell, utilizavel)
     for rel, c in files.items():
         if sum(c.values()) > 0:  # ignora os negativos adicionados
+            av_loc[project_of(rel)] += n_lines.get(rel, 0)
+            if rel in n_lines:
+                pop_loc.append(n_lines[rel])
             av_files[project_of(rel)] += 1
             av_smells[project_of(rel)] += sum(c.values())
     tot_loc = sum(d["loc"] for d in st.values())
@@ -661,12 +762,18 @@ def main():
     def per_kloc(n, loc):
         return round(1000 * n / loc, 2) if loc else 0.0
 
+    dist = loc_dist
+
+    sel_dist, pop_dist = dist(list(loc_by_file.values())), dist(pop_loc)
+
     rows = []
     for pj in projects:
         d = st[pj]
         rows.append({
             "project": pj, "files_selected": d["files"], "loc": d["loc"], "sloc": d["sloc"],
             "smells_selected": d["smells"],
+            "loc_per_file": round(d["loc"] / d["files"], 1) if d["files"] else 0.0,
+            "pop_loc_per_file": round(av_loc[pj] / av_files[pj], 1) if av_files[pj] else 0.0,
             "share_of_sample_pct": round(100 * d["smells"] / tot_smells, 1) if tot_smells else 0.0,
             "smells_per_kloc": per_kloc(d["smells"], d["loc"]),
             "files_available": av_files[pj], "smells_available": av_smells[pj],
@@ -680,7 +787,26 @@ def main():
     mae = float(np.mean([abs(r["share_of_sample_pct"] - r["share_of_population_pct"]) for r in rows_mae])) \
         if rows_mae else 0.0
 
+    n_files, n_kinds = len(selected), len(KEYS)
+    tot_bytes = sum(bytes_by_file.values())
+    arch = {
+        "agente_unico": {"chamadas": n_files, "loc_enviadas": tot_loc, "tokens_codigo_aprox": tot_bytes // 4},
+        "multiagente_completo": {"chamadas": n_kinds * n_files, "loc_enviadas": n_kinds * tot_loc,
+                                 "tokens_codigo_aprox": n_kinds * tot_bytes // 4},
+    }
+    if pairs:
+        arch["multiagente_assigned"] = {
+            "chamadas": len(pairs),
+            "loc_enviadas": sum(loc_by_file[r] for r, _ in pairs),
+            "tokens_codigo_aprox": sum(bytes_by_file[r] for r, _ in pairs) // 4}
+
+    pd.DataFrame([{"file": r, "project": project_of(r), "loc": loc_by_file[r], "bytes": bytes_by_file[r],
+                   "n_pairs": sum(1 for k in KEYS if (r, k) in pairs) if pairs else "",
+                   "assigned_smells": "; ".join(k for k in KEYS if (r, k) in pairs) if pairs else ""}
+                  for r in sorted(selected)]).to_csv(args.out / "sample_file_stats.csv", index=False)
+
     summary = {
+        "loc_per_file_sample": sel_dist, "loc_per_file_population": pop_dist, "by_architecture": arch,
         "total_loc": tot_loc, "total_sloc": tot_sloc, "smells_selected": tot_smells,
         "smells_per_kloc": per_kloc(tot_smells, tot_loc),
         "smells_per_kloc_by_smell": {k: per_kloc(totals[k], tot_loc) for k in KEYS},
@@ -691,6 +817,8 @@ def main():
         "seed": args.seed, "total": args.total, "min_per_smell": args.min_per_smell,
         "pool_per_smell": args.pool_per_smell, "select_mode": args.select_mode,
         "max_file_share": args.max_file_share, "max_project_share": args.max_project_share,
+        "reuse_files": args.reuse_files, "prefer_small": args.prefer_small, "max_lines": args.max_lines,
+        "min_lines": args.min_lines, "prefer_loc": args.prefer_loc, "seed_search": seed_search_info,
         "negatives": n_neg,
         "quotas": quotas, "available": avail,
         "cell_quotas": cell_quotas,
@@ -706,16 +834,27 @@ def main():
     }, indent=2))
 
     print(f"\nArquivos selecionados: {len(selected)} ({n_neg} negativos)")
+    if pairs:
+        print(f"Pares (arquivo, smell): {len(pairs)} | pares/arquivo: {len(pairs) / len(selected):.2f}")
     print(f"{'smell':<22}{'disponivel':>11}{'cota':>7}{'obtido':>8}")
     for k in KEYS:
         print(f"{k:<22}{avail[k]:>11}{quotas[k]:>7}{totals[k]:>8}")
     print(f"{'TOTAL':<22}{sum(avail.values()):>11}{sum(quotas.values()):>7}{sum(totals.values()):>8}")
     print(f"\nLOC dos arquivos selecionados: {tot_loc} ({tot_sloc} sem brancos/comentarios) | "
           f"{per_kloc(tot_smells, tot_loc)} smells por 1000 LOC")
-    print(f"{'projeto':<28}{'arqs':>6}{'LOC':>9}{'smells':>8}{'%amostra':>9}{'/KLOC':>8}{'%popul.':>9}")
+    print(f"\nLOC por arquivo (amostra):   media {sel_dist['mean']} | mediana {sel_dist['median']} | "
+          f"p90 {sel_dist['p90']} | min {sel_dist['min']} | max {sel_dist['max']}")
+    print(f"LOC por arquivo (populacao): media {pop_dist['mean']} | mediana {pop_dist['median']} | "
+          f"p90 {pop_dist['p90']} | min {pop_dist['min']} | max {pop_dist['max']}  "
+          f"(arquivos com smell e utilizaveis, n={pop_dist['n']})")
+    print(f"\n{'projeto':<28}{'arqs':>6}{'LOC':>9}{'LOC/arq':>9}{'pop':>8}{'smells':>8}{'%amostra':>9}{'/KLOC':>8}{'%popul.':>9}")
     for r in rows:
-        print(f"{r['project']:<28}{r['files_selected']:>6}{r['loc']:>9}{r['smells_selected']:>8}"
-              f"{r['share_of_sample_pct']:>9}{r['smells_per_kloc']:>8}{r['share_of_population_pct']:>9}")
+        print(f"{r['project']:<28}{r['files_selected']:>6}{r['loc']:>9}{r['loc_per_file']:>9}{r['pop_loc_per_file']:>8}"
+              f"{r['smells_selected']:>8}{r['share_of_sample_pct']:>9}{r['smells_per_kloc']:>8}{r['share_of_population_pct']:>9}")
+    print("\nVolume por configuracao (so o codigo; some o prompt por chamada). tokens = bytes/4, aproximado:")
+    print(f"{'arquitetura':<24}{'chamadas':>10}{'LOC enviadas':>14}{'tokens aprox.':>15}")
+    for name, a in arch.items():
+        print(f"{name:<24}{a['chamadas']:>10}{a['loc_enviadas']:>14}{a['tokens_codigo_aprox']:>15}")
     print(f"\nMAE (%amostra vs %popul.): {mae:.2f} p.p. ({len(rows_mae)} projetos)")
     below = [k for k in KEYS if totals[k] < quotas[k]]
     if below:

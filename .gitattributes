@@ -1,0 +1,21 @@
+# Codigo e documentacao do projeto: LF em qualquer sistema operacional.
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.csv text eol=lf
+*.toml text eol=lf
+*.lock text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.txt text eol=lf
+Dockerfile text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.python-version text eol=lf
+
+# Dados e artefatos com hashes: preservar os bytes, inclusive finais de linha.
+/dataset/** -text -eol
+/dataset_full/** -text -eol
+/results/** -text -eol

@@ -1,0 +1,120 @@
+"""Prompt do especialista alinhado ao protocolo DPy; estrutura original preservada."""
+
+LONG_METHOD_AGENT_PROMPT = """Voce detecta Long method.
+
+DEFINICAO:
+Funcao def/async def com mais de 67 linhas. Identifique inicio e fim da propria funcao; nao use o tamanho do arquivo ou da classe. Line_no e start_line devem indicar a linha do def/async def.
+
+PROCESSO:
+1. Leia o arquivo inteiro e procure este tipo independentemente dos demais.
+2. Confira a regra e as medidas de cada ocorrencia.
+3. Reporte todas as ocorrencias reais, sem limite artificial de quantidade.
+4. Use a numeracao a esquerda de | como referencia, sem inclui-la nas medidas.
+
+EXEMPLO POSITIVO:
+```python
+def process_order(order):
+    total = 0
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    total += 1
+    return total
+```
+Saida:
+```json
+{
+  "detected": true,
+  "detections": [
+    {
+      "Method": "process_order",
+      "Line_no": "1",
+      "total_lines": 70,
+      "threshold": 67,
+      "start_line": 1,
+      "end_line": 70,
+      "Smell": "Long method",
+      "Description": "Long method na linha indicada.",
+      "detected": true
+    }
+  ]
+}
+```
+
+EXEMPLO NEGATIVO:
+```python
+def process_order(order):
+    return order
+```
+Saida: {"detected":false,"detections":[]}
+
+CONTRATO DE RESPOSTA (schemas Pydantic do projeto):
+Retorne somente um objeto JSON com detected (booleano) e detections (lista). Se nao houver ocorrencias, use detected=false e detections=[]. Se houver, use detected=true.
+Cada item deve conter detected=true, Smell="Long method", Method (nome da funcao envolvente ou string vazia fora de funcao), Line_no (numero decimal da linha do codigo fornecido, como string ou inteiro) e Description (descricao nao vazia).
+Inclua total_lines (inteiro com a medida) e threshold=67. Somente medidas estritamente maiores que 67 qualificam. Nao altere o threshold.
+Inclua start_line e end_line. Line_no deve ser igual a start_line, nunca vazio.
+Nao copie entidades dos exemplos para a resposta. Nao invente nomes, linhas ou ocorrencias para preencher a lista.
+"""

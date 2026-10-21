@@ -2,7 +2,7 @@
 
 # Resumo Executivo
 
-Este documento apresenta as definições exatas e referências bibliográficas dos **11 Implementation Smells** suportados pela ferramenta DPy para Python, identificando suas fontes originais na literatura.
+Este documento apresenta as definições operacionais adotadas nesta versão e referências bibliográficas dos **11 Implementation Smells** suportados pela ferramenta DPy para Python, identificando suas fontes originais na literatura.
 
 ---
 
@@ -16,12 +16,12 @@ Este documento apresenta as definições exatas e referências bibliográficas d
 - **Chen et al.** (2016) 
 
 **Definição (Fowler, 1999):**
-Um método é considerado "longo" quando contém muitas linhas de código, tornando-o difícil de entender, manter e reutilizar. Fowler afirma: *"The programs that live best and longest are those with short methods"*.
+Uma função ou método excessivamente longo, cujo tamanho dificulta compreensão e manutenção.
 
 **Regra de Detecção DPy:**
 
-- Quando o tamanho de uma função é maior que **67 linhas** de código
-- Nota: Este threshold foi adaptado para Python usando fator de verbosidade 0.67 (Python é mais conciso que Java)
+- Quando o tamanho de uma função é **maior que 67 linhas**.
+- O limite é estrito: 67 linhas não qualificam. O prompt identifica a própria função e sua linha de definição; não usa o tamanho do arquivo ou da classe.
 
 **Por que é problemático:**
 
@@ -42,11 +42,12 @@ Um método é considerado "longo" quando contém muitas linhas de código, torna
 - **Chen et al.** (2016) 
 
 **Definição (Fowler, 1999):**
-Uma função com um número excessivo de parâmetros de entrada. Fowler explica o contexto histórico: *"No passado, os programadores eram ensinados a passar como parâmetros tudo que um método precisasse [...] A programação orientada a objetos mudou isso. Se você não tem algo de que precisa, você pode sempre pedir a outro objeto para obtê-lo."*
+Uma função com um número excessivo de parâmetros de entrada.
 
 **Regra de Detecção DPy:**
 
-- Quando uma função recebe **mais de 4 parâmetros**
+- Quando uma função recebe **mais de 4 parâmetros**.
+- Na implementação atual dos prompts, `self`, `cls`, `*args` e `**kwargs` não entram na contagem. Exatamente 4 não qualifica.
 
 **Por que é problemático:**
 
@@ -67,11 +68,13 @@ Uma função com um número excessivo de parâmetros de entrada. Fowler explica 
 - Mencionado em estudos de simulação por Habib et al. (2024) como um smell prevalente em Python
 
 **Definição:**
-Uma instrução (statement) excessivamente longa em uma única linha de código que dificulta a leitura e pode indicar complexidade desnecessária.
+Uma instrução de código excessivamente longa. A unidade adotada pelo prompt é a instrução completa, que pode ocupar mais de uma linha física.
 
 **Regra de Detecção DPy:**
 
-- Quando uma instrução possui **mais de 80 caracteres**
+- Quando uma instrução possui **mais de 80 caracteres**.
+- O prompt examina a instrução completa, incluindo strings de dados em instruções multilinha; não conta a numeração adicionada ao código, comentários isolados ou docstrings isoladas.
+- Exatamente 80 caracteres não qualifica. A localização é a linha inicial da instrução.
 
 **Por que é problemático:**
 
@@ -98,11 +101,12 @@ Habib et al. (2024) em estudo sobre sistemas de simulação encontrou que Long S
 - Conceito de "meaningful names" discutido por diversos autores
 
 **Definição:**
-Um identificador (nome de função, classe, campo ou variável local) excessivamente longo que, paradoxalmente, ao invés de clarificar, pode dificultar a leitura e manutenção do código.
+Um identificador excessivamente longo: nome de função, classe, campo ou variável local.
 
 **Regra de Detecção DPy:**
 
-- Quando o comprimento de um identificador é **maior que 20 caracteres**
+- Quando o comprimento de um identificador é **maior que 20 caracteres**.
+- O prompt informa o nome exato e reporta uma ocorrência por escopo de definição, não por uso. Imports e strings não são definições; nomes dunder não são excluídos apenas por essa característica.
 
 **Por que é problemático:**
 
@@ -129,11 +133,13 @@ Deve-se balancear com o princípio de nomes descritivos. Um nome muito curto (cr
 - Reconhecido por ferramentas como SonarQube, Checkstyle, e PMD
 
 **Definição (Martin, Clean Code):**
-Um bloco try-except (try-catch) com bloco except/catch vazio que captura exceções mas não toma nenhuma ação. Martin enfatiza: *"Error handling is one thing"* - tratamento de erros é uma responsabilidade distinta e deve ser feita adequadamente, não ignorada.
+Um bloco `except` cujo corpo contém somente `pass` ou uma única instrução `return`, sem outra instrução de tratamento.
 
 **Regra de Detecção DPy:**
 
-- Quando um bloco `except` contém apenas `pass` ou uma instrução `return` sem qualquer logging ou tratamento
+- O corpo do `except` contém **somente `pass` ou uma única instrução `return`**, com ou sem valor.
+- `return`, `return None` e `return False` qualificam. Logging, `raise`, atribuições ou qualquer outra instrução no corpo impedem a classificação. Comentários não são instruções.
+- Não há threshold numérico. A localização pedida é a linha do `except`.
 
 **Por que é problemático:**
 
@@ -186,8 +192,8 @@ Uma função excessivamente complexa em termos de fluxo de controle, medida pela
 
 **Regra de Detecção DPy:**
 
-- Quando a Complexidade Ciclomática de McCabe de uma função é **maior que 7**
-- Referência: Almashfi & Lu (2020) [Referência 52 do DPy]
+- Quando a Complexidade Ciclomática de McCabe de uma função é **maior que 7**.
+- Exatamente 7 não qualifica. O prompt informa a medida e localiza a definição da função.
 
 **Complexidade Ciclomática de McCabe:**
 Métrica que conta o número de caminhos linearmente independentes através do código de um programa. Calculada como:
@@ -218,11 +224,12 @@ Métrica que conta o número de caminhos linearmente independentes através do c
 - **Fowler, M.** (2018). *Refactoring: Improving the Design of Existing Code* (2nd Edition). [Referência 2 do DPy]
 
 **Definição:**
-Uma instrução condicional com um número excessivo de operadores lógicos, tornando a condição difícil de compreender.
+Uma condição com um número excessivo de operadores lógicos `and` e `or`.
 
 **Regra de Detecção DPy:**
 
-- Quando o número de operadores lógicos (`and` e `or`) é **maior que 2** em uma única instrução condicional
+- Quando o número de operadores `and` e `or` é **maior que 2 na mesma condição**.
+- Conta operadores, não operandos ou comparações. Exatamente 2 operadores não qualifica.
 
 **Por que é problemático:**
 
@@ -264,7 +271,7 @@ if is_adult and is_brazilian and is_verified_with_balance:
 - Prática de engenharia de software defensiva
 
 **Definição:**
-Uma instrução match-case (switch-case em outras linguagens) sem caso default/padrão, o que pode levar a situações não tratadas e comportamento imprevisível quando valores inesperados são encontrados.
+Uma instrução Python `match-case` sem um caso padrão `case _`.
 
 **CWE-478 Classification:**
 O MITRE classifica este problema como uma fraqueza (weakness) de software que pode levar a:
@@ -275,7 +282,8 @@ O MITRE classifica este problema como uma fraqueza (weakness) de software que po
 
 **Regra de Detecção DPy:**
 
-- Quando não há um caso default (bloco `case _`) em uma instrução Python `match-case`
+- Quando não há um caso padrão **`case _`** na instrução `match-case`.
+- Não há threshold numérico. A localização pedida é a linha inicial do `match`.
 
 **Por que é problemático:**
 
@@ -329,12 +337,13 @@ match status:
 - **Chen et al.** (2016). "Detecting code smells in python programs". *International Conference on Software Analysis, Testing and Evolution (SATE)*. 
 
 **Definição:**
-Uma função lambda excessivamente longa. Lambdas foram projetadas para serem expressões simples e concisas.
+Uma expressão lambda excessivamente longa.
 
 **Regra de Detecção DPy:**
 
-- Quando o comprimento de uma função lambda é **maior que 80 caracteres**
-- Referência direta: Chen et al. (2016)
+- Quando o comprimento da expressão lambda é **maior que 80 caracteres**.
+- O prompt conta desde `lambda` até o final da expressão, inclusive quando distribuída em várias linhas; não inclui a atribuição ou chamada envolvente. Exatamente 80 não qualifica.
+- A localização pedida é a linha inicial da lambda.
 
 **Por que é problemático:**
 
@@ -351,7 +360,7 @@ Lambdas em Python devem ser expressões simples. Para lógica complexa, use fun�
 
 ```python
 # ❌ Long Lambda Function
-result = map(lambda x: x * 2 if x > 0 else x * -1 if x < 0 else 0 if x == 0 else None, numbers)
+result = map(lambda number: number * 2 if number > 0 else number * -1 if number < 0 else 0 if number == 0 else None, numbers)
 
 # ✅ Função nomeada
 def transform_number(x):
@@ -376,12 +385,14 @@ result = map(transform_number, numbers)
 - **Chen et al.** (2016) 
 
 **Definição (Fowler):**
-Uma longa série de chamadas de métodos encadeadas. Também conhecido como "Train Wreck" ou "Law of Demeter violation".
+Um encadeamento excessivamente longo de acessos a objetos. Conceitualmente, o smell é descrito como uma longa série de chamadas encadeadas; o critério operacional desta versão procura acessos consecutivos a atributos de dados, conforme as saídas DPy disponíveis.
 
 **Regra de Detecção DPy:**
 
-- Quando **mais de 2 métodos são encadeados** juntos
-- Referência: Chen et al. (2016)
+- Threshold operacional: **mais de 2 elementos**, contando a base e os atributos consecutivos. `obj.a` tem 2; `obj.a.b` tem 3; `obj.a.b.c` tem 4.
+- O prompt distingue atributos de dados de métodos invocados. Chamadas e indexações interrompem a sequência; não se somam argumentos nem expressões independentes.
+- São examinados argumentos e alvos de atribuição: `consume(obj.a.b)` e `obj.a.b = value` qualificam. Reporta-se a cadeia maximal, sem duplicar seus prefixos.
+- Essa interpretação operacional foi inferida das saídas DPy; não constitui certificação de equivalência com seu código-fonte. O threshold numérico continua sendo 2.
 
 **Por que é problemático:**
 
@@ -403,10 +414,10 @@ Um objeto deve apenas chamar métodos de:
 
 ```python
 # ❌ Long Message Chain
-customer.getAddress().getCity().getZipCode().validate()
+zip_code = customer.address.zip_code
 
 # ✅ Refatorado (Hide Delegate)
-customer.validateZipCode()
+zip_code = customer.zip_code
 
 ```
 
@@ -425,14 +436,16 @@ customer.validateZipCode()
 - Amplamente documentado na literatura de Clean Code e boas práticas
 
 **Definição (Fowler):**
-Fowler define o refactoring "Replace Magic Number with Symbolic Constant" como a solução para quando números literais aparecem no código sem contexto claro de seu significado. O termo "magic" refere-se ao fato de que o significado do número não é óbvio - parece "mágico" ou arbitrário.
+Um literal numérico usado diretamente no código sem constante nomeada que expresse seu significado.
 
 **Definição (Robert C. Martin):**
 Em Clean Code, Martin enfatiza: *"Replace magic numbers with named constants"* como parte fundamental de escrever nomes significativos. Ele argumenta que números literais não comunicam intenção e dificultam manutenção.
 
 **Regra de Detecção DPy:**
 
-- Quando há um literal numérico no código, **exceto os comumente usados 0, -1 e 1**, sem definição/constante nomeada
+- Quando há um literal numérico sem constante nomeada, **exceto 0, 1 e -1**, incluindo representações decimais equivalentes.
+- `2`, `-2`, `10` e `100` não são exceções. Testes, índices, loops, argumentos e comparações não são excluídos automaticamente. Dígitos em strings e comentários não são literais numéricos de código.
+- O prompt informa o valor em `number` e sua linha. Não há threshold de magnitude.
 
 **Por que é problemático:**
 
@@ -580,7 +593,7 @@ Habib et al. (2024) encontrou que Magic Number é **62.77% mais prevalente** em 
 | Complex Method | CC > 7 | McCabe + Almashfi & Lu (2020) |
 | Complex Conditional | > 2 operadores lógicos | Baseado em Fowler |
 | Long Lambda | > 80 caracteres | Chen et al. (2016) |
-| Long Message Chain | > 2 métodos encadeados | Chen et al. (2016) |
+| Long Message Chain | > 2 elementos no acesso a atributos de dados | Critério operacional inferido das saídas DPy |
 
 ---
 
@@ -672,6 +685,6 @@ Nenhum smell é "inventado" ou sem base teórica - todos são reconhecidos e val
 
 **Base:** Artigo DPy (Boloori & Sharma, 2024) + Busca extensiva nas referências citadas + Literatura complementar
 
-**Data:** Outubro 2025
+**Data:** Outubro 2025 (documento original)
 
-**Última atualização:** Com referências completas e validadas
+**Última atualização:** 21 de outubro de 2026 — definições e thresholds da versão 2.0. A bibliografia foi preservada do documento original, sem nova revisão bibliográfica.

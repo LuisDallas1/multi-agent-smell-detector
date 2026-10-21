@@ -2,6 +2,7 @@
 
 from typing import Optional, Union
 from pydantic import BaseModel, Field, field_validator
+from core.smell_rules import THRESHOLDS
 
 
 class CodeSmellDetection(BaseModel):
@@ -34,7 +35,7 @@ class CodeSmellDetection(BaseModel):
 class ComplexMethodDetection(CodeSmellDetection):
     Smell: str = Field(default="Complex method")
     cyclomatic_complexity: Optional[int] = None
-    threshold: int = Field(default=7)
+    threshold: int = Field(default=THRESHOLDS['complex method'])
     start_line: Optional[int] = None
     end_line: Optional[int] = None
 
@@ -42,7 +43,7 @@ class ComplexMethodDetection(CodeSmellDetection):
 class LongMethodDetection(CodeSmellDetection):
     Smell: str = Field(default="Long method")
     total_lines: Optional[int] = None
-    threshold: int = Field(default=67)
+    threshold: int = Field(default=THRESHOLDS['long method'])
     start_line: Optional[int] = None
     end_line: Optional[int] = None
 
@@ -50,30 +51,31 @@ class LongMethodDetection(CodeSmellDetection):
 class ComplexConditionalDetection(CodeSmellDetection):
     Smell: str = Field(default="Complex conditional")
     logical_operators: Optional[int] = None
-    threshold: int = Field(default=3)
+    threshold: int = Field(default=THRESHOLDS['complex conditional'])
 
 
 class LongParameterListDetection(CodeSmellDetection):
     Smell: str = Field(default="Long parameter list")
     parameter_count: Optional[int] = None
-    threshold: int = Field(default=4)
+    threshold: int = Field(default=THRESHOLDS['long parameter list'])
 
 
 class LongStatementDetection(CodeSmellDetection):
     Smell: str = Field(default="Long statement")
     line_length: Optional[int] = None
-    threshold: int = Field(default=120)
+    threshold: int = Field(default=THRESHOLDS['long statement'])
 
 
 class LongIdentifierDetection(CodeSmellDetection):
     Smell: str = Field(default="Long identifier")
     identifier_name: Optional[str] = None
     length: Optional[int] = None
-    threshold: int = Field(default=20)
+    threshold: int = Field(default=THRESHOLDS['long identifier'])
 
 
 class MagicNumberDetection(CodeSmellDetection):
     Smell: str = Field(default="Magic number")
+    number: Optional[Union[int, float]] = None
 
 
 class EmptyCatchBlockDetection(CodeSmellDetection):
@@ -87,13 +89,13 @@ class MissingDefaultDetection(CodeSmellDetection):
 class LongLambdaFunctionDetection(CodeSmellDetection):
     Smell: str = Field(default="Long lambda function")
     lambda_length: Optional[int] = None
-    threshold: int = Field(default=80)
+    threshold: int = Field(default=THRESHOLDS['long lambda function'])
 
 
 class LongMessageChainDetection(CodeSmellDetection):
     Smell: str = Field(default="Long message chain")
     chain_length: Optional[int] = None
-    threshold: int = Field(default=2)
+    threshold: int = Field(default=THRESHOLDS['long message chain'])
 
 
 class MultipleComplexMethodResponse(BaseModel):

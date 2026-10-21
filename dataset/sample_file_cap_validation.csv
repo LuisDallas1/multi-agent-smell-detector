@@ -1,12 +1,12 @@
 smell,quota,cap,max_contribution,max_file
-complex method,39,10,3,pennylane/pennylane/estimator/qpe_resources/first_quantization.py
-long parameter list,36,9,3,server/music_assistant/providers/msx_bridge/mappers.py
-long method,35,9,3,Agently/agently/utils/StreamingJSONParser.py
-complex conditional,33,9,2,Cirq/cirq-core/cirq/qis/clifford_tableau.py
-empty catch block,37,10,5,bernstein/src/bernstein/core/observability/debug_bundle.py
-long identifier,55,14,8,bernstein/src/bernstein/eval/promotion.py
-long statement,72,18,10,Cirq/cirq-core/cirq/sim/sparse_simulator.py
-magic number,46,12,9,bernstein/src/bernstein/core/protocols/mcp/stateless_core.py
-missing default,31,8,2,inspect_ai/src/inspect_ai/model/_openai_responses.py
-long lambda function,31,8,4,bernstein/src/bernstein/core/admission/engine.py
-long message chain,35,9,3,bernstein/src/bernstein/core/server/dashboard_auth.py
+complex method,39,10,3,fast-agent/src/fast_agent/cli/__main__.py
+long parameter list,36,9,4,bernstein/src/bernstein/core/admission/engine.py
+long method,35,9,1,bernstein/src/bernstein/cli/commands/token_cmd.py
+complex conditional,32,8,2,server/music_assistant/providers/bose_soundtouch/player.py
+empty catch block,37,10,3,bernstein/src/bernstein/core/planning/roadmap_runtime.py
+long identifier,54,14,5,server/music_assistant/providers/sendspin/synchronizer_role.py
+long statement,73,19,9,Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py
+magic number,47,12,7,bernstein/src/bernstein/cli/commands/token_cmd.py
+missing default,31,8,2,pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_operation_backend.py
+long lambda function,32,8,4,bernstein/src/bernstein/core/admission/engine.py
+long message chain,34,9,4,Cirq/cirq-google/cirq_google/engine/abstract_local_job_test.py

@@ -1,0 +1,177 @@
+# Copyright 2018-2025 Xanadu Quantum Technologies Inc.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
+Contains the IQP template.
+"""
+
+from collections import defaultdict
+from functools import reduce
+
+import numpy as np
+
+from pennylane import math
+from pennylane.core.operator import Operation
+from pennylane.decomposition import add_decomps, register_resources
+from pennylane.math import expand_matrix
+from pennylane.ops import Hadamard, MultiRZ, PauliRot, PauliX
+from pennylane.typing import Float, TensorLike, Wire
+from pennylane.wires import Wires
+
+
+class IQP(Operation):
+    r"""
+    A template that builds an Instantaneous Quantum Polynomial (IQP) circuit. The gates of these circuits correspond
+    to multi-qubit X rotations, whose generators are given by tensor products of Pauli X operators.
+
+    In this `IQPOpt <https://arxiv.org/pdf/2501.04776>`__ paper and this
+    `train on classical, deploy on quantum <https://arxiv.org/pdf/2503.02934>`__ paper, the authors
+    present methods for analytically approximating expectation values coming from measurements made on IQP circuits.
+    This allows for the classical training of the parameters of these circuits prior to deploying them to a
+    quantum computer for actual computation.
+
+    Certain computational problems such as generative machine learning and combinatorial optimization can be cast as
+    a minimization over functions of these expectation values. Since these circuits are also believed to be hard to
+    sample from using classical algorithms, they can potentially lead to a quantum advantage.
+
+    Args:
+        weights (list): The parameters of the IQP gates.
+        wires (WiresLike): The wires that the IQP circuit operates on.
+        pattern (list[list[list[int]]]): Specification of the trainable gates. Each element of ``pattern`` corresponds to a
+            unique trainable parameter. Each sublist specifies the generators to which that parameter applies.
+            Generators are specified by listing the qubits on which an X operator acts. For example, the ``pattern``
+            ``[[[0]], [[1]], [[2]], [[3]]]`` specifies a circuit with single qubit rotations on the first four qubits, each
+            with its own trainable parameter. The ``pattern`` ``[[[0],[1]], [[2],[3]]]`` correspond to a circuit with two
+            trainable parameters with generators :math:`X_0+X_1` and :math:`X_2+X_3` respectively. A circuit with a
+            single trainable gate with generator :math:`X_0\otimes X_1` corresponds to the ``pattern``
+            ``[[[0,1]]]``.
+        spin_sym (bool, optional): If True, the circuit is equivalent to one where the initial state
+            :math:`\frac{1}{\sqrt(2)}(|00\dots0> + |11\dots1>)` is used in place of :math:`|00\dots0>`.
+
+    Raises:
+        ValueError: when ``pattern`` and ``weights`` have a different number of elements.
+
+    **Example:**
+
+    Below is an example of a 2-qubit IQP circuit. At this small scale, a state vector simulation is tractable.
+
+    .. code-block:: python
+
+        dev = qp.device("default.qubit")
+
+        @qp.qnode(dev)
+        def iqp_circuit(weights, pattern, spin_sym):
+            qp.IQP(weights=weights, wires=[0, 1], pattern=pattern, spin_sym=spin_sym)
+            return [qp.expval(qp.PauliZ(0)), qp.expval(qp.PauliZ(1))]
+
+    >>> iqp_circuit(weights=[0.89, 0.54], pattern=[[[0]], [[1]]], spin_sym=False)  # doctest: +SKIP
+    [np.float64(-0.20768100160878344), np.float64(0.47132836417373947)]
+
+    >>> print(qp.draw(iqp_circuit, level="device")([0.89, 0.54], [[[0]], [[1]]], False))  # doctest: +SKIP
+    0: ─╭IQP─┤  <Z>
+    1: ─╰IQP─┤  <Z>
+
+    .. seealso:: :doc:`IQP tutorial <demo:demos/tutorial_iqp_circuit_optimization_jax>`
+    """
+
+    resource_keys = {"spin_sym", "pattern", "num_wires"}
+
+    def __init__(
+        self, weights, wires, pattern, spin_sym=False
+    ):  # pylint: disable=too-many-arguments
+        if len(pattern) != len(weights):
+            raise ValueError(
+                "Number of gates and number of parameters for an Instantaneous Quantum Polynomial "
+                f"circuit must be the same, got {len(pattern)} gates and {len(weights)} weights."
+            )
+
+        wires = Wires(wires)
+        num_wires = len(wires)
+
+        if num_wires == 0:
+            raise ValueError("At least one valid wire is required.")
+
+        self._hyperparameters = {
+            "spin_sym": spin_sym,
+            "weights": weights,
+            "pattern": pattern,
+            "num_wires": len(wires),
+        }
+        super().__init__(wires=wires)
+
+    # pylint: disable=arguments-differ
+    @staticmethod
+    def compute_matrix(weights, num_wires, pattern, spin_sym) -> TensorLike:
+        layers = []
+
+        if spin_sym:
+            pauli_mat = PauliRot.compute_matrix(2 * np.pi / 4, "Y" + "X" * (num_wires - 1))
+            layers.append(pauli_mat)
+
+        for par, gate in zip(weights, pattern, strict=True):
+            for gen in gate:
+                x_mat = reduce(math.kron, [PauliX.compute_matrix() for _ in gen])
+                rx_mat = math.expm(-1j * par * expand_matrix(x_mat, gen, list(range(num_wires))))
+                layers.append(rx_mat)
+
+        return reduce(math.matmul, layers[::-1])
+
+    @classmethod
+    def _primitive_bind_call(cls, *args, **kwargs):
+        return cls._primitive.bind(*args, **kwargs)
+
+    @property
+    def resource_params(self):
+        return {
+            "spin_sym": self.hyperparameters["spin_sym"],
+            "pattern": self.hyperparameters["pattern"],
+            "num_wires": len(self.wires),
+        }
+
+
+def _instantaneous_quantum_polynomial_resources(spin_sym, pattern, num_wires):
+    resources = defaultdict(int)
+    if spin_sym:
+        pauli_word = "Y" + "X" * (num_wires - 1)
+        resources[PauliRot(Float, pauli_word=pauli_word, wires=Wire[len(pauli_word)])] = 1
+
+    resources[Hadamard] = 2 * num_wires
+
+    for gate in pattern:
+        for gen in gate:
+            resources[MultiRZ(Float, Wire[len(gen)])] += 1
+
+    return resources
+
+
+@register_resources(_instantaneous_quantum_polynomial_resources)
+def _instantaneous_quantum_polynomial_decomposition(
+    wires, weights, pattern, spin_sym, **__
+):  # pylint: disable=unused-argument, too-many-arguments
+    num_wires = len(wires)
+
+    if spin_sym:
+        PauliRot(2 * np.pi / 4, "Y" + "X" * (num_wires - 1), wires=wires)
+
+    for i in range(num_wires):
+        Hadamard(wires[i])
+
+    for par, gate in zip(weights, pattern, strict=True):
+        for gen in gate:
+            MultiRZ(2 * par, wires=[wires[g] for g in gen])
+
+    for i in range(num_wires):
+        Hadamard(wires[i])
+
+
+add_decomps(IQP, _instantaneous_quantum_polynomial_decomposition)
