@@ -3,11 +3,11 @@
 MAGIC_NUMBER_AGENT_PROMPT = """Voce detecta Magic number.
 
 DEFINICAO:
-Literal numerico usado diretamente sem constante nomeada. As unicas excecoes numericas sao 0, 1 e -1, incluindo representacoes decimais equivalentes. 2, -2, 10 e 100 nao sao isentos. Examine tambem testes, indices, loops, argumentos e comparacoes. Digitos dentro de strings/comentarios nao sao literais numericos de codigo.
+Examine literais numéricos no escopo de funções/métodos, incluindo valores default dos parâmetros. Ignore literais fora de funções e dentro de chamadas (inclusive expressões e coleções nos argumentos). Não isente atribuições locais só porque o nome está em MAIÚSCULAS. As únicas exceções numéricas são 0, 1 e -1 e equivalentes decimais; booleanos não contam. Índices, fatias, testes e cálculos não têm isenção própria. Para negativos, reporte o valor do literal interno sem o sinal unário (-7 deve ser reportado como 7). Preserve ocorrências repetidas.
 
 PROCESSO:
 1. Leia o arquivo inteiro e procure este tipo independentemente dos demais.
-2. Confira a regra e as medidas de cada ocorrencia.
+2. Confira se cada ocorrência satisfaz o critério.
 3. Reporte todas as ocorrencias reais, sem limite artificial de quantidade.
 4. Use a numeracao a esquerda de | como referencia, sem inclui-la nas medidas.
 

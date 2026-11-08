@@ -35,9 +35,7 @@ Saída:
       "Smell": "Long parameter list",
       "Method": "create_user",
       "Line_no": "5",
-      "Description": "Method 'create_user' has 6 parameters (threshold: 4). Consider introducing a User parameter object.",
-      "parameter_count": 6,
-      "threshold": 4
+      "Description": "Ocorrência de long parameter list no trecho indicado, acima do limite definido."
     }
   ]
 }
@@ -59,6 +57,7 @@ Análise: Função tem exatamente 4 parâmetros. Como threshold é > 4 (não >= 
 CONTRATO DE RESPOSTA (schemas Pydantic do projeto):
 Retorne somente um objeto JSON com detected (booleano) e detections (lista). Se nao houver ocorrencias, use detected=false e detections=[]. Se houver, use detected=true.
 Cada item deve conter detected=true, Smell="Long parameter list", Method (nome da funcao envolvente ou string vazia fora de funcao), Line_no (numero decimal da linha do codigo fornecido, como string ou inteiro) e Description (descricao nao vazia).
-Inclua parameter_count (inteiro com a medida) e threshold=4. Somente medidas estritamente maiores que 4 qualificam. Nao altere o threshold.
 Nao copie entidades dos exemplos para a resposta. Nao invente nomes, linhas ou ocorrencias para preencher a lista.
+
+Aplique o limiar para decidir se há smell. Reporte localização e evidência curta; não calcule nem devolva a medida exata, threshold, intervalos ou contagens intermediárias.
 """

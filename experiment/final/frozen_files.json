@@ -1,0 +1,1096 @@
+{
+  "files": [
+    {
+      "File": "Agently/agently/builtins/hookers/RuntimeStorageSinkHooker.py",
+      "sha256": "c0b9276a3a3316e21bef766bce98a500c5551188ebe64954e9b3b6c0ef57b983",
+      "lines": 81,
+      "bytes": 2563
+    },
+    {
+      "File": "Agently/agently/builtins/plugins/ActionExecutor/MCPActionExecutor.py",
+      "sha256": "7a7f77b78100a18a9bb8c5f6c40f35163af623c74cbabe1e238c87f0f020b2a2",
+      "lines": 175,
+      "bytes": 6619
+    },
+    {
+      "File": "Agently/agently/builtins/plugins/ModelRequester/OpenAICompatible/modules/request_builder.py",
+      "sha256": "2ac6945f308f139c517dffd5018fb6e753b045ce4f347dc17181bc29d5c0fef6",
+      "lines": 182,
+      "bytes": 7033
+    },
+    {
+      "File": "Agently/agently/builtins/plugins/ResponseParser/modules/xml_field.py",
+      "sha256": "e80f0f2eab0a804ded7da10d53743224f27060fc95a01be400f624dd19612c77",
+      "lines": 172,
+      "bytes": 7040
+    },
+    {
+      "File": "Agently/agently/builtins/plugins/ToolManager/AgentlyToolManager.py",
+      "sha256": "65418db358b76d9fed0b19da7ccd2ad93871e31fc915c2722d388b754c0aa7e6",
+      "lines": 517,
+      "bytes": 20530
+    },
+    {
+      "File": "Agently/agently/core/TaskWorkspace/FileIORegistry.py",
+      "sha256": "4dc07b3cc274b6835f811325cfe3461996848b1abc2dcb3230f312a7a7a3505e",
+      "lines": 209,
+      "bytes": 7265
+    },
+    {
+      "File": "Agently/agently/core/__init__.py",
+      "sha256": "80614bb27873dcc82d046987cac9333905892f4df36223e09ccbdc49c54ca21a",
+      "lines": 201,
+      "bytes": 5409
+    },
+    {
+      "File": "Agently/agently/core/orchestration/TaskDAG/TaskDAGResolver.py",
+      "sha256": "20d20241f2117e187eabac6b5afd5e5688e908a4e375598e41df69ec2f8ce0c5",
+      "lines": 148,
+      "bytes": 4968
+    },
+    {
+      "File": "Agently/agently/core/orchestration/TriggerFlow/process/ForEachProcess.py",
+      "sha256": "44d7812da0f51824d373409764e8fa2602e0f3647e42841188652902c526c23a",
+      "lines": 195,
+      "bytes": 8246
+    },
+    {
+      "File": "Agently/agently/types/data/action.py",
+      "sha256": "b8344bf8b05fbbc9e8e5148118fcda3ab69da1630730bf13fa37ef186f1f7ffc",
+      "lines": 201,
+      "bytes": 5510
+    },
+    {
+      "File": "Agently/agently/types/data/skill.py",
+      "sha256": "5aa6b26ae8ac8bd1b386da0abb58ecda4e64295ef5790b9b51d9827fb00ba86d",
+      "lines": 181,
+      "bytes": 6713
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/circuits/optimization_pass_test.py",
+      "sha256": "4bda741d70dbe627b9d3322cf6e2da8a40ab1879de29a29c47f835b847168595",
+      "lines": 179,
+      "bytes": 6092
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/contrib/acquaintance/mutation_utils_test.py",
+      "sha256": "04964b017e6cfcf624b9c6f60b4b03d58445def060609b33e17172a6f8a60145",
+      "lines": 179,
+      "bytes": 8078
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/contrib/paulistring/clifford_optimize.py",
+      "sha256": "6e4166691f431ffd55d332740d6c87f0fed5965042fa7439b6868eb0a4b7e09b",
+      "lines": 206,
+      "bytes": 8917
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/interop/quirk/cells/control_cells.py",
+      "sha256": "bde33f1e2dbadd8ffbf92a61a9d73167ede307c538773aa15e6460223755ab89",
+      "lines": 164,
+      "bytes": 5733
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/ops/global_phase_op.py",
+      "sha256": "d357bcc8fc5ffcafe93eed6ccaab24de517c4f796e138c6697907432936b5847",
+      "lines": 153,
+      "bytes": 5869
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/ops/identity_test.py",
+      "sha256": "b94a8dc6017cf132afd4f6ca79703b13428d4b1e5913fafec617c730c991ee02",
+      "lines": 239,
+      "bytes": 8405
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/ops/set_variable_op.py",
+      "sha256": "4ec65f1dacff4538c6817debbc1182c6edb656a4ebb461ef11984882f9c8c235",
+      "lines": 164,
+      "bytes": 6309
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/protocols/json_test_data/spec.py",
+      "sha256": "25fa29bc2a7f32f8b3f305bc66cf4a3655e10b075fd1d2ec690ce426a7cee654",
+      "lines": 183,
+      "bytes": 5973
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/transformers/analytical_decompositions/clifford_decomposition.py",
+      "sha256": "a28390ab7e6c62464afbe4e59ade32b9c81666299b8f994aa34c7ba67e7f7063",
+      "lines": 187,
+      "bytes": 6994
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/transformers/optimize_for_target_gateset.py",
+      "sha256": "5a8cecef6d52aa29a2cd837b5b8716c72b8a852f9a092ceba20109002ad374c3",
+      "lines": 173,
+      "bytes": 7472
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/transformers/qubit_management_transformers.py",
+      "sha256": "9c61ed11b484b3fc6e8d67ba452d7aeef867aa026b27b220ba3fd7db85d7d7c3",
+      "lines": 187,
+      "bytes": 10043
+    },
+    {
+      "File": "Cirq/cirq-core/cirq/transformers/routing/line_initial_mapper_test.py",
+      "sha256": "b39ce83a20abc5516756cca3f33b0a1b986f4b2a6e42153803fb18884ec08add",
+      "lines": 196,
+      "bytes": 7763
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/api/v2/run_context_test.py",
+      "sha256": "8e37ccc03ad1d1709c90ea96b69e0f701082e550247e10d47a6a7b8b30972162",
+      "lines": 193,
+      "bytes": 5672
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/engine/abstract_local_job_test.py",
+      "sha256": "3d32db43ff36c5fffaccc30dbbf262cc203e6a2c82a2a4dc7f71f0e0a20dcffa",
+      "lines": 172,
+      "bytes": 6142
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/engine/processor_sampler.py",
+      "sha256": "6946e1deea49e2f008a41830e3f94403c1c326edb841df98619ea74673a16664",
+      "lines": 201,
+      "bytes": 8428
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/engine/qcs_notebook.py",
+      "sha256": "af8e0428560b0924f257a5b4dc7a32da6b9cac4c11c1f87343bf9fc208b613ef",
+      "lines": 184,
+      "bytes": 6820
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/engine/qcs_notebook_test.py",
+      "sha256": "616da453e6344eb5b227f3ad7119e28d96813810f7f55b2bf1024f8219df4bf9",
+      "lines": 178,
+      "bytes": 6983
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/engine/runtime_estimator_test.py",
+      "sha256": "6071bf4039df6c2479a0189d204b2c8dc4ad2dae46221e8d13b1c44b567b8803",
+      "lines": 185,
+      "bytes": 7316
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/experimental/ops/coupler_pulse.py",
+      "sha256": "0c8857a62ca644c5d3de83f3c8ff66f6197619cef2191ead4f117a644546b9d2",
+      "lines": 174,
+      "bytes": 6603
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/study/finite_random_variable_test.py",
+      "sha256": "711acfe3b95ae41fe0ad7a56018edec5146995f1793a428c2a50611f74e2a714",
+      "lines": 165,
+      "bytes": 5955
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/transformers/target_gatesets/sycamore_gateset.py",
+      "sha256": "c8f5baec97dfa66f0fc5e08caf2544883ce4ecd432eb1f3c73b12c1f13ec49fe",
+      "lines": 177,
+      "bytes": 7252
+    },
+    {
+      "File": "Cirq/cirq-google/cirq_google/workflow/qubit_placement_test.py",
+      "sha256": "7368f1ed5583f51b434096b2f741678d282b01754c2f0d420e038616a23ac9e1",
+      "lines": 222,
+      "bytes": 8434
+    },
+    {
+      "File": "Cirq/cirq-ionq/cirq_ionq/ionq_gateset.py",
+      "sha256": "8fd1549e832d1a64f1655f41cbcdd0c29cda9fb3d184ca72bc0d9878509f738f",
+      "lines": 172,
+      "bytes": 6256
+    },
+    {
+      "File": "Cirq/cirq-web/cirq_web/circuits/symbols.py",
+      "sha256": "863cac82001ed9a997a0c23b562e8f7aabc33f4eba75e2a2132efa15f75b03c2",
+      "lines": 185,
+      "bytes": 6457
+    },
+    {
+      "File": "Cirq/dev_tools/git_env_tools.py",
+      "sha256": "4464cb10e35b67665eed2899adca4f62a51bb9e2848c64dd6f49006d425ce852",
+      "lines": 187,
+      "bytes": 7011
+    },
+    {
+      "File": "EvoScientist/EvoScientist/channels/wechat/verify_server.py",
+      "sha256": "5f56fc6e2b2385437bea32ce321febf70d4cd5ad3f4d99dfb270ad1267c6f3dd",
+      "lines": 180,
+      "bytes": 6494
+    },
+    {
+      "File": "EvoScientist/EvoScientist/config/onboard/helpers.py",
+      "sha256": "a785d4b16a9cd837774c73156ebb6f74706dc936b8a4284a64c91be306c2f413",
+      "lines": 717,
+      "bytes": 23018
+    },
+    {
+      "File": "EvoScientist/EvoScientist/gateway/types.py",
+      "sha256": "7da745537e43baa24ef084dd336a2db2e387529d18651451f00c82e008264e3b",
+      "lines": 187,
+      "bytes": 5848
+    },
+    {
+      "File": "EvoScientist/EvoScientist/middleware/background.py",
+      "sha256": "34ed9e4becbda3f1c1fb3384d710a6c15eaaec4e6e529c180aad42afb3e9f68d",
+      "lines": 179,
+      "bytes": 6586
+    },
+    {
+      "File": "EvoScientist/EvoScientist/middleware/events.py",
+      "sha256": "900cc6221a2188de1e2592d456b24e47a93bd10faf1ac01ad0636c988400118e",
+      "lines": 192,
+      "bytes": 7254
+    },
+    {
+      "File": "EvoScientist/EvoScientist/stream/formatter.py",
+      "sha256": "f03f087f39ece88f227b5afd5695153534ae950aaddd75926a7e92cd6439b6fd",
+      "lines": 181,
+      "bytes": 5875
+    },
+    {
+      "File": "bernstein/scripts/bench_toolcall_identity.py",
+      "sha256": "6ba56d48a0b35e3160621a1e41d97f2df96862feef1b6cfad171300e0a043f84",
+      "lines": 207,
+      "bytes": 8314
+    },
+    {
+      "File": "bernstein/scripts/check_coverage_thresholds.py",
+      "sha256": "b88f087d7c3669b9b2a530fefddd3de6477b6d17ba3beb5cb43f539634053748",
+      "lines": 200,
+      "bytes": 5962
+    },
+    {
+      "File": "bernstein/scripts/demo_article12_export.py",
+      "sha256": "669db85698878ec6a82c1d0d4a709a408ef89988e80799a4d11f5217d7fe6b08",
+      "lines": 182,
+      "bytes": 6410
+    },
+    {
+      "File": "bernstein/src/bernstein/adapters/claude_stream_parser.py",
+      "sha256": "89d59675d805546d277a0fe0ec2d16a76296085d6d79b0e123c1066d95c054be",
+      "lines": 405,
+      "bytes": 15469
+    },
+    {
+      "File": "bernstein/src/bernstein/adapters/claude_wrapper_script.py",
+      "sha256": "81408db3d0d4da01c7e1e6f39477b40992192db6ced5ca064dfdb351d4e4f115",
+      "lines": 200,
+      "bytes": 8919
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/best_of_n_rank_cmd.py",
+      "sha256": "fcd5e60268384896a6ab0d4c58e7928d89a1824ccee44d2ae2ccda17980af960",
+      "lines": 170,
+      "bytes": 5783
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/blast_radius_cmd.py",
+      "sha256": "b20fbaa616ab521f405e4b618e093e198276ad311845fb7f159da18d22b9d9cf",
+      "lines": 165,
+      "bytes": 5328
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/bom_cmd.py",
+      "sha256": "5810760f7cc00134a5c7cb95c6e846c9c15d64216f0681d9c81c539eeb5a4006",
+      "lines": 175,
+      "bytes": 5573
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/compaction_cmd.py",
+      "sha256": "44694c9345d661b153969e04d2f0467b2fb0920dff9ce1cff9bf9731fe43da3f",
+      "lines": 184,
+      "bytes": 6964
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/conn_cmd.py",
+      "sha256": "b415eacb7a9cde744534ba8978496b99a4f27e28228535eeee5a3fd9600aacb7",
+      "lines": 184,
+      "bytes": 6478
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/creds_cmd.py",
+      "sha256": "b8d826289ff5e7374b164f4b12ac699af3250c187aaa86d334400a0cb04ca875",
+      "lines": 303,
+      "bytes": 10822
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/review_responder_cmd.py",
+      "sha256": "f45bb8d5cbb914f9b3a64c4fac85994949b75bebfee45605242e5b45e2bf9227",
+      "lines": 189,
+      "bytes": 6499
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/token_cmd.py",
+      "sha256": "b1c9586213851b64dfb1186ec9c1976258d6649d4bb4a062b729efc5e667b6f6",
+      "lines": 184,
+      "bytes": 6810
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/undo_cmd.py",
+      "sha256": "f210a23bafe0a862563cc2f7a8ae6fce169774a7c3c445b463b9c0113b232a63",
+      "lines": 130,
+      "bytes": 4763
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/commands/worktrees_cmd.py",
+      "sha256": "c7ffd6abb75e9684e44d303dc6ef87a0c3a3132d64ab6ef671babc93711bb62a",
+      "lines": 715,
+      "bytes": 27524
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/display/image_renderer.py",
+      "sha256": "2bbd4d11c27a7a4f332d0170de5429145cabe86d7298a08cf0a89b719280557d",
+      "lines": 391,
+      "bytes": 15037
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/display/leaderboard.py",
+      "sha256": "68ce908676acc3b94a8c7a08558e1f6f606716d9621cd8e0523cd20e33d86de8",
+      "lines": 322,
+      "bytes": 10401
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/doctor/suggest_docs.py",
+      "sha256": "bfbd0d92ff393b34223a3e3e18135336e8694455c3d0ff419fa708a6c17b434d",
+      "lines": 183,
+      "bytes": 6144
+    },
+    {
+      "File": "bernstein/src/bernstein/cli/side_query.py",
+      "sha256": "966cac2ce91631cf3b20b1b7b5e133d1466c9efe7d3e9c90d1aba7c0faae9508",
+      "lines": 258,
+      "bytes": 7951
+    },
+    {
+      "File": "bernstein/src/bernstein/core/admission/engine.py",
+      "sha256": "b79052ebc6d6c2eebd0ac33249e11e9c7f32661128647b25da06c4afab4e9274",
+      "lines": 659,
+      "bytes": 27057
+    },
+    {
+      "File": "bernstein/src/bernstein/core/agents/agent_profiling.py",
+      "sha256": "810e4ad878eca26fd8ab0452c3ace2bc2ae23e07a52fc841673dca2acbb01b73",
+      "lines": 198,
+      "bytes": 6889
+    },
+    {
+      "File": "bernstein/src/bernstein/core/agents/agent_trust.py",
+      "sha256": "cb8d330ca9a09b7accef665af29603c8655ef68c0e18132e62fdbc9893999e4b",
+      "lines": 535,
+      "bytes": 19474
+    },
+    {
+      "File": "bernstein/src/bernstein/core/config/upgrade_executor.py",
+      "sha256": "9cc6fba62d2de1fecdb7d3994dc2ed224f7007270d574f9e4a867451ba16641a",
+      "lines": 629,
+      "bytes": 23564
+    },
+    {
+      "File": "bernstein/src/bernstein/core/cost/cost_forecast.py",
+      "sha256": "192a0e7a0b33672f34b065f3516e4ffec4384474ed27d6f941902fe8dc608d72",
+      "lines": 216,
+      "bytes": 6948
+    },
+    {
+      "File": "bernstein/src/bernstein/core/fleet/tui.py",
+      "sha256": "52d1d5c97cd778f5750b84fd6476fd0cf11a777a4212392a022720e8814c2405",
+      "lines": 215,
+      "bytes": 7444
+    },
+    {
+      "File": "bernstein/src/bernstein/core/govern/__init__.py",
+      "sha256": "fa0f447aad660d75a44dbb72608b9814fa09bf045519e04051dd14d55874f38e",
+      "lines": 196,
+      "bytes": 7292
+    },
+    {
+      "File": "bernstein/src/bernstein/core/knowledge/semantic_cache.py",
+      "sha256": "0ea869d7d40a452d8f1fe8bf3e2afddb0c2973c6b46c3e683f1c2d0b5dc5100f",
+      "lines": 683,
+      "bytes": 26464
+    },
+    {
+      "File": "bernstein/src/bernstein/core/orchestration/best_of_n.py",
+      "sha256": "e0900812c468e101164a18e80e6cbe383c907a5be2371d0ff83ae057f2b27505",
+      "lines": 542,
+      "bytes": 19816
+    },
+    {
+      "File": "bernstein/src/bernstein/core/orchestration/orchestrator_summary.py",
+      "sha256": "aa22abb7c2d6bbb238571b6cdea9e739fb54b1baa8c53932a6d8f68810b1012e",
+      "lines": 218,
+      "bytes": 8176
+    },
+    {
+      "File": "bernstein/src/bernstein/core/orchestration/run_closure_owner.py",
+      "sha256": "3d2098eb4f42d3c716cac0fdcd183293942d1c8ebc7d653c1a76bb895de95167",
+      "lines": 207,
+      "bytes": 7547
+    },
+    {
+      "File": "bernstein/src/bernstein/core/planning/roadmap_runtime.py",
+      "sha256": "68830074f4db2a1350157f0bca25fe524cc0bea5204f7447231a34589199ed78",
+      "lines": 192,
+      "bytes": 6430
+    },
+    {
+      "File": "bernstein/src/bernstein/core/planning/scenario_library.py",
+      "sha256": "4f8055a43ff02c01de3300964e03f2983c8b5a37133ffca0bb06d3e3c6ba119c",
+      "lines": 145,
+      "bytes": 4257
+    },
+    {
+      "File": "bernstein/src/bernstein/core/planning/workflow_importer.py",
+      "sha256": "044c512d10b818276ad4c30bd1027ef39a12758b162347678f6017b7e8ddbc9a",
+      "lines": 192,
+      "bytes": 6481
+    },
+    {
+      "File": "bernstein/src/bernstein/core/quality/graduation.py",
+      "sha256": "74829cb75581b46329ceac5d88b59e2d4aa06014342beafcf7317e4d152b4dca",
+      "lines": 547,
+      "bytes": 20616
+    },
+    {
+      "File": "bernstein/src/bernstein/core/quality/review_consensus.py",
+      "sha256": "ab59965f7fc3c9e6924f8295912fe55a4188cd51695b9a4cf98a4db7ed7fab05",
+      "lines": 510,
+      "bytes": 17917
+    },
+    {
+      "File": "bernstein/src/bernstein/core/routes/dashboard.py",
+      "sha256": "45938b0950b4d059df1a55c37df3614df71db6f16b8a2ef97d7dd952db0a3d69",
+      "lines": 217,
+      "bytes": 8078
+    },
+    {
+      "File": "bernstein/src/bernstein/core/routes/graphql_api.py",
+      "sha256": "e32ce127dc08953b53209e9ceab52b0d7aa5892c94475b3e49a54b16f64e5819",
+      "lines": 254,
+      "bytes": 8712
+    },
+    {
+      "File": "bernstein/src/bernstein/core/routes/task_claim_receipt.py",
+      "sha256": "cece1dd131eda867d73721e66bdd26238f903acdb734d20c4023b4c2c699aeec",
+      "lines": 185,
+      "bytes": 7979
+    },
+    {
+      "File": "bernstein/src/bernstein/core/routing/cascade.py",
+      "sha256": "66093530f3412d2afaf4b1c4ae91b9a950efc04b2bf91a3f3f41fb0a7a98d3a5",
+      "lines": 529,
+      "bytes": 19465
+    },
+    {
+      "File": "bernstein/src/bernstein/core/routing/llm.py",
+      "sha256": "ced284794a6d0570fd82e3bd1f39b714a5c1463107c27475d5a19fb607828ca1",
+      "lines": 469,
+      "bytes": 16865
+    },
+    {
+      "File": "bernstein/src/bernstein/core/routing/role_classifier.py",
+      "sha256": "453fbba8552e2b23fda91364565d007d14922c845122701bef72fc9af91dfdb9",
+      "lines": 152,
+      "bytes": 3817
+    },
+    {
+      "File": "bernstein/src/bernstein/core/routing/router_policies.py",
+      "sha256": "16d797a4a03b000ab000261c1af1a5155b35ce307cccc8b1caa090267280937d",
+      "lines": 331,
+      "bytes": 11495
+    },
+    {
+      "File": "bernstein/src/bernstein/core/security/run_closure.py",
+      "sha256": "4ea6cdae7472d50d933278eb8b29e6905572a7b4808d3bb937246ca06334cbb8",
+      "lines": 281,
+      "bytes": 10626
+    },
+    {
+      "File": "bernstein/src/bernstein/core/security/security_posture.py",
+      "sha256": "489cf5c71abfaf67bc47fbf80c29efae360befc4f230e6f9bc262c1387d83316",
+      "lines": 348,
+      "bytes": 11350
+    },
+    {
+      "File": "bernstein/src/bernstein/core/security/toolcall_identity.py",
+      "sha256": "2f833e025cf276e92e11570680dd81c852dfc187779e0d5462c9e651c76030c1",
+      "lines": 283,
+      "bytes": 11406
+    },
+    {
+      "File": "bernstein/src/bernstein/core/server/server_middleware.py",
+      "sha256": "173683072e45a9380a68b6333210c7beb0dead9b82bbf5f32989ba9bc815afa9",
+      "lines": 331,
+      "bytes": 12684
+    },
+    {
+      "File": "bernstein/src/bernstein/core/tasks/batch_router.py",
+      "sha256": "f27b3eb4b95789ef9a36c042472e3449f99e1e90b6834ede480d550ae46f8a76",
+      "lines": 180,
+      "bytes": 6000
+    },
+    {
+      "File": "bernstein/src/bernstein/gitlab_app/ci_router.py",
+      "sha256": "f8faee519d5d3563e553eecc46f33f80b7f9e33e86866752d2dfd485ac2c3c95",
+      "lines": 190,
+      "bytes": 6384
+    },
+    {
+      "File": "bernstein/src/bernstein/gitlab_app/cost_reporter.py",
+      "sha256": "e9602cc86698ac12bc73f368229d4b1b5fe10f8f5fc71ec0ca1273746d0fc1f4",
+      "lines": 196,
+      "bytes": 6185
+    },
+    {
+      "File": "dynamiq/dynamiq/cli/commands/app.py",
+      "sha256": "4cffa2e69c48cd5725c44a048ccfd1da21142954680d5443dfb2324515458b31",
+      "lines": 179,
+      "bytes": 6831
+    },
+    {
+      "File": "dynamiq/dynamiq/cli/commands/evaluation.py",
+      "sha256": "10c73e449c1f361d7d178630a22dbd9bd850475691bb0f23563c6da26ffffddb",
+      "lines": 161,
+      "bytes": 7184
+    },
+    {
+      "File": "dynamiq/dynamiq/nodes/agents/prompts/manager.py",
+      "sha256": "442b8446447737be77c2ab6430376ca31a617cc2ad92945c03dc6dd69d8748a8",
+      "lines": 353,
+      "bytes": 14429
+    },
+    {
+      "File": "dynamiq/dynamiq/nodes/agents/prompts/overrides/gpt.py",
+      "sha256": "f659ed5b7eb8ceebfd49a5cba247c0a260d9282138fde7b9be7db4400ff8698e",
+      "lines": 152,
+      "bytes": 8536
+    },
+    {
+      "File": "dynamiq/dynamiq/nodes/knowledgebases/vertex.py",
+      "sha256": "37f3846b456a0a596d9075a04ef51313e2a9295b6fca8c246c95f57c6e4ac164",
+      "lines": 486,
+      "bytes": 23626
+    },
+    {
+      "File": "dynamiq/dynamiq/nodes/operators/operators.py",
+      "sha256": "6be741b90edf9768e539b0c0f04081c0f72615c45c986b8e2f3ceffbba33aeff",
+      "lines": 300,
+      "bytes": 12370
+    },
+    {
+      "File": "dynamiq/dynamiq/nodes/tools/e2b_sandbox.py",
+      "sha256": "a50c1a766207494d8cb389a22bb11585b3c03a994ecf0271f5d0118686ba97a2",
+      "lines": 163,
+      "bytes": 6746
+    },
+    {
+      "File": "dynamiq/dynamiq/utils/json_parser.py",
+      "sha256": "da510585e84db9c6cab7dd0736431b788668ca7c7371109c825507474d3f6319",
+      "lines": 217,
+      "bytes": 7338
+    },
+    {
+      "File": "fast-agent/hatch_build.py",
+      "sha256": "7310c4c6e476b005990b32b79ecf4d66e27a0fc69dbeccc1a8317d47a4ef057a",
+      "lines": 184,
+      "bytes": 7912
+    },
+    {
+      "File": "fast-agent/scripts/model_picker_proto_dialogs.py",
+      "sha256": "ca4d11dcb84079444c7f5e3908f95e93772125c2b2a4bb9b733e645458ea372c",
+      "lines": 174,
+      "bytes": 5540
+    },
+    {
+      "File": "fast-agent/src/fast_agent/agents/subagent_transcript.py",
+      "sha256": "674ec589f1287d8bc05fff9289603b9f805df4714f350316267f788f792e11cd",
+      "lines": 192,
+      "bytes": 6554
+    },
+    {
+      "File": "fast-agent/src/fast_agent/cli/__main__.py",
+      "sha256": "956c6f2f8ce05cca806af8efcb6cad741e4f32e25df7c83fc497a182fc7263f8",
+      "lines": 182,
+      "bytes": 5795
+    },
+    {
+      "File": "fast-agent/src/fast_agent/cli/commands/export.py",
+      "sha256": "9570df718aabee4489eb7b5e3fcdae37d219d1d07b109bf6197988170d03f36f",
+      "lines": 188,
+      "bytes": 6383
+    },
+    {
+      "File": "fast-agent/src/fast_agent/core/instruction_utils.py",
+      "sha256": "1970f0c786ed64485b52bf250b7d92896059d14dbb6c3096dc66ad46fbc046ba",
+      "lines": 165,
+      "bytes": 5513
+    },
+    {
+      "File": "fast-agent/src/fast_agent/marketplace/registry_urls.py",
+      "sha256": "419b926f26f9ffbf3af198ae44af3dbb568e3ad3af8f35130f7f7542b6deb5c1",
+      "lines": 252,
+      "bytes": 7479
+    },
+    {
+      "File": "fast-agent/src/fast_agent/plugins/marketplace.py",
+      "sha256": "500569f19f6de12370ebd39e8eff655d3786c4489514282aeacd5b3b35378849",
+      "lines": 163,
+      "bytes": 6131
+    },
+    {
+      "File": "fast-agent/src/fast_agent/session/locking.py",
+      "sha256": "6cf1b820ac9dab62827fc1a484719d39ba1b9892eed49f6ed31d73ddb8b13bac",
+      "lines": 215,
+      "bytes": 6743
+    },
+    {
+      "File": "fast-agent/src/fast_agent/tools/filesystem_runtime_base.py",
+      "sha256": "fef7aaeba1b93324ca89c928aaeebeff8366b6b273c139ac576c7815f87e33be",
+      "lines": 282,
+      "bytes": 10287
+    },
+    {
+      "File": "fast-agent/src/fast_agent/ui/markdown/content.py",
+      "sha256": "6d3b94e7eefa65c6c7dcc7c99ee57ffbe0cb6101274e40d1bd88bbc668c10e97",
+      "lines": 174,
+      "bytes": 5373
+    },
+    {
+      "File": "fast-agent/src/fast_agent/ui/prompt/special_commands.py",
+      "sha256": "b5cde37652b2caf535dd11f57faaf898213fb229d983316bc106b08cdf32f2d4",
+      "lines": 228,
+      "bytes": 6802
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/_util/generate_config_args.py",
+      "sha256": "d44121762c55bae63da228f804572808a0abe476e0794ad62a9078a5e7c5d71c",
+      "lines": 196,
+      "bytes": 8227
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/_util/s3_monitor.py",
+      "sha256": "9c9cd0c13bf77447b8bd20809688c59a9100c1a0f73e9c9cc3c44c19eba2c1eb",
+      "lines": 182,
+      "bytes": 6466
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/_util/zipfile.py",
+      "sha256": "9d2ed58f78e4b63f04d083f876036757b472dbd506fe93ee07bcc4f4a1bd987b",
+      "lines": 184,
+      "bytes": 7355
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/agent/_bridge/completions.py",
+      "sha256": "669b16d8e35b63dbbd625da939a1c75394548d150de02233b02847c6b668b57e",
+      "lines": 180,
+      "bytes": 6612
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/log/_recover/_api.py",
+      "sha256": "8f67105c1843773f8969d3602877b0d2a9418042dd531dbe61a50e48ed531e2c",
+      "lines": 295,
+      "bytes": 10120
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/model/_providers/_anthropic_batch.py",
+      "sha256": "f616d4bed6a9fdfe917cfe85d8ca36cd63471b996004ef916482b518f3e324b1",
+      "lines": 184,
+      "bytes": 6695
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/model/_providers/_anthropic_citations.py",
+      "sha256": "ba9584b85b3b364e029b285b22f2f6c219aac1cd1b58b867d79fc40d5c0ed69c",
+      "lines": 174,
+      "bytes": 6721
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/model/_providers/openai_completions.py",
+      "sha256": "60cc6c7fe89d210498a1925552f7841364a6672f7d4ad668765b8dafb8bd6325",
+      "lines": 187,
+      "bytes": 7186
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/tool/_tools/_computer/_resources/tool/computer_tool.py",
+      "sha256": "7c96bccd17994685b11f247561ff841c4c8af637dbfd43eb6d84400817f0fa05",
+      "lines": 148,
+      "bytes": 5127
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/util/_checkpoint/_host_egress.py",
+      "sha256": "cd6919e4632de02ac82de9a8b94e57c5aaac1dd375da0a5af992152c616d1b10",
+      "lines": 178,
+      "bytes": 6525
+    },
+    {
+      "File": "inspect_ai/src/inspect_ai/util/_sandbox/docker/failure.py",
+      "sha256": "10925bb4c77f4e1f0159db67d97e75525978d356fed3bf14e02bb29c4f387229",
+      "lines": 156,
+      "bytes": 7260
+    },
+    {
+      "File": "inspect_ai/src/inspect_tool_support/src/inspect_tool_support/_cli/main.py",
+      "sha256": "9f6465078deaccf07a48ab72445c74d7b56c03bcee8c84f4dd162f63a2e1370b",
+      "lines": 137,
+      "bytes": 4714
+    },
+    {
+      "File": "parlant/src/parlant/adapters/nlp/hugging_face.py",
+      "sha256": "f60a53324cba3b04abc8dbbf5e25cf2fe93e47d3c0debc3d675c50edb964037c",
+      "lines": 182,
+      "bytes": 5798
+    },
+    {
+      "File": "parlant/src/parlant/adapters/nlp/openrouter_service.py",
+      "sha256": "7c6e131e7db24a2941c2774a57b604960c61e6dd900df3f62a4ba96e3651f7d0",
+      "lines": 684,
+      "bytes": 27216
+    },
+    {
+      "File": "parlant/src/parlant/core/app_modules/context_variables.py",
+      "sha256": "170982562f317ddcf9f394e951b5970b3d94ff3d7c96cbb78438fc22e9b791ac",
+      "lines": 188,
+      "bytes": 6586
+    },
+    {
+      "File": "parlant/src/parlant/core/emission/event_buffer.py",
+      "sha256": "4ad95398b72ead0ee2eafe70d0273cbf0cf28cc3955905d2c01ce11f7a44bb39",
+      "lines": 169,
+      "bytes": 5154
+    },
+    {
+      "File": "parlant/src/parlant/core/engines/alpha/hooks.py",
+      "sha256": "b8c2fd0adf57655ec1b40534814c17fdccecd50bd1b0cfec846f35e8c41ec692",
+      "lines": 166,
+      "bytes": 7707
+    },
+    {
+      "File": "pennylane/pennylane/backline/runtime/runtime_call.py",
+      "sha256": "751fb033e90bc7f2e5c68a90a290cebf473f02c1a4279ce80cbf50e304d5bbc2",
+      "lines": 196,
+      "bytes": 8633
+    },
+    {
+      "File": "pennylane/pennylane/devices/__init__.py",
+      "sha256": "78a91705ce5e5cb933d185731eb2e84a34d35adcf1c79576f40a871afb24d4d9",
+      "lines": 176,
+      "bytes": 5174
+    },
+    {
+      "File": "pennylane/pennylane/labs/templates/superposition_thc.py",
+      "sha256": "fa590274b7d48e0903f83ff338c33c4e5e12577f387de5a974ee4b34d1c5b62b",
+      "lines": 478,
+      "bytes": 19521
+    },
+    {
+      "File": "pennylane/pennylane/math/interface_utils.py",
+      "sha256": "d8947ae70c5efdccd5854ff34131d09cb66e9266c3f127198b0c96b59a6ed8b1",
+      "lines": 216,
+      "bytes": 7040
+    },
+    {
+      "File": "pennylane/pennylane/ops/functions/eigvals.py",
+      "sha256": "d564ce9875ae86f62550b1827eb691a8b33d942e28ae13d28aaec8b311b0d539",
+      "lines": 161,
+      "bytes": 6936
+    },
+    {
+      "File": "pennylane/pennylane/ops/functions/matrix.py",
+      "sha256": "dcccea30e3d96bbe830627ac98333b7fe6189d56fa33902ad4bf2fafd83e9363",
+      "lines": 261,
+      "bytes": 10304
+    },
+    {
+      "File": "pennylane/pennylane/optimize/rotoselect.py",
+      "sha256": "ec6480ad6c25a9124acc225472d1e206d5b60c1bba3e941f514357302b6eb6b2",
+      "lines": 228,
+      "bytes": 10713
+    },
+    {
+      "File": "pennylane/pennylane/resource/mlir_specs.py",
+      "sha256": "a2a74353671cf4542d5c5e4ca1ce709db7947d777a5d9136aa7715c6f229b654",
+      "lines": 206,
+      "bytes": 8496
+    },
+    {
+      "File": "pennylane/pennylane/templates/subroutines/iqp.py",
+      "sha256": "24f999129d72eee69dd54cd38408ecb2405b034f49bc48f29a5fefdee5dd9eac",
+      "lines": 178,
+      "bytes": 7196
+    },
+    {
+      "File": "pennylane/pennylane/templates/subroutines/qft.py",
+      "sha256": "880d783a13e5a60908872426276d3420487faf279522cfe7858aeefa10116b9a",
+      "lines": 180,
+      "bytes": 6065
+    },
+    {
+      "File": "pennylane/pennylane/templates/subroutines/select_pauli_rot.py",
+      "sha256": "e8a54d5b763f5b00d0f56bef09bb8dab2d493f27639f4d496e89f8142f5c8887",
+      "lines": 205,
+      "bytes": 7190
+    },
+    {
+      "File": "pennylane/pennylane/transforms/batch_partial.py",
+      "sha256": "e445c21a07719ea08a257bf15fed9e3088b3afb13de4f3c4e6d1763ae14af705",
+      "lines": 195,
+      "bytes": 7728
+    },
+    {
+      "File": "pennylane/pennylane/transforms/optimization/optimization_utils.py",
+      "sha256": "d06eb06b69d8acfebad6ad9d3a52ea2d9095b309086b32f7ab8c60ff79e15341",
+      "lines": 168,
+      "bytes": 6507
+    },
+    {
+      "File": "private-gpt/private_gpt/artifact_index/vector_artifact_index.py",
+      "sha256": "91dc4e99691eebec67ea80fee2abd9263559e200b6b38cf0fb4600f92193470b",
+      "lines": 174,
+      "bytes": 6676
+    },
+    {
+      "File": "private-gpt/private_gpt/components/ingest/transformations/markdown_normalization_transform.py",
+      "sha256": "74471581668df64337d6887e01fb0d2a4956c69cae253ed2c4115884be33d605",
+      "lines": 173,
+      "bytes": 7028
+    },
+    {
+      "File": "private-gpt/private_gpt/components/llm/tokenizers/tiktoken.py",
+      "sha256": "1d6945ef3366312145169f89e2fa0123348c4f9bbe1c1a9a81de5fc01acf8010",
+      "lines": 167,
+      "bytes": 5672
+    },
+    {
+      "File": "private-gpt/private_gpt/components/postprocessor/tree_expansion/split_subtrees.py",
+      "sha256": "ed3dfa2c0942a78b4e2f14de8f320ddc3447cd79e0273c104880022b3629af79",
+      "lines": 185,
+      "bytes": 7385
+    },
+    {
+      "File": "private-gpt/private_gpt/components/sandbox/local.py",
+      "sha256": "b9f7cb0dd6ccc97404d287f618e2ff43167df573184087a4d3fbf635f42d76ed",
+      "lines": 180,
+      "bytes": 6599
+    },
+    {
+      "File": "private-gpt/private_gpt/components/tools/builders/present_files_tool_builder.py",
+      "sha256": "4f11c0a96e9afe285d17e1653d7be31298c02c97c936eaac551542bf4addcde6",
+      "lines": 152,
+      "bytes": 5911
+    },
+    {
+      "File": "private-gpt/private_gpt/components/toolsets/factories/filesystem_toolset_factory.py",
+      "sha256": "e11f28505a05a6cf978974d70570ae1b0e42511f6db45f3818722ff5e8ea1c62",
+      "lines": 161,
+      "bytes": 6766
+    },
+    {
+      "File": "private-gpt/private_gpt/components/web/scraper/runner.py",
+      "sha256": "ad1c44b6ad0dd42042de064c8c95b91c8b17232b4926007f4e77a3cab73ee542",
+      "lines": 175,
+      "bytes": 6333
+    },
+    {
+      "File": "private-gpt/private_gpt/events/models/_message.py",
+      "sha256": "3768a932a93a2c5f78f7ad756f3561cb52de92cab83565d58e2ddf00541ed4bf",
+      "lines": 172,
+      "bytes": 6284
+    },
+    {
+      "File": "private-gpt/private_gpt/server/chat/interceptors/document_file_interceptor.py",
+      "sha256": "b9efa7a61d6f85d0193cdeb6ddedb58c3c9d447ea201a7785bcd5f781540392a",
+      "lines": 186,
+      "bytes": 7833
+    },
+    {
+      "File": "private-gpt/private_gpt/server/chat/interceptors/extract_citation_interceptor.py",
+      "sha256": "ba2f7708e5f1e1c14614aa92953a195d655b162490f4afbcd0c73fd141a0d2f2",
+      "lines": 197,
+      "bytes": 7554
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/_deferred_capabilities.py",
+      "sha256": "bba39ffbe4cab648af3f8f0c84a243ded67a8917c3c68e4b45d63d60628a0b43",
+      "lines": 189,
+      "bytes": 8040
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/capabilities/_tool_search.py",
+      "sha256": "7ecb87ebf182d1ef8614991a05054b7f7ca26f7f9bb68c4ead4b4c25153152ba",
+      "lines": 217,
+      "bytes": 10563
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/dbos/_operation_backend.py",
+      "sha256": "fe3879b792f21fa99165b570a717ec7be8031340d2eb33ae17b6459c0fe27715",
+      "lines": 319,
+      "bytes": 14312
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_dynamic_toolset.py",
+      "sha256": "8241909e7af63efb8ca46254e85804f2d9adde5abb47635667d0be03815fb8d6",
+      "lines": 184,
+      "bytes": 7387
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/durable_exec/temporal/_mcp_toolset.py",
+      "sha256": "b58fdf2a47183ca3d86ddbe1e6cf4e87406ff62104e8b37da86a46e0cae9a736",
+      "lines": 157,
+      "bytes": 6803
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/embeddings/instrumented.py",
+      "sha256": "f48681225bd14bf5ddc93c2eb1d7eacd3d11136ac28af5c334e5f0853ad634fc",
+      "lines": 212,
+      "bytes": 8754
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/models/_tool_choice.py",
+      "sha256": "eed577fb5044478b6adccde5a23623f2dcd120d852a897a0d26e62d1cae1ebac",
+      "lines": 186,
+      "bytes": 9546
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/gateway.py",
+      "sha256": "b9eee98b24c005ab0efa9e603273e8ad94f35dfa8e8a20aba0e08d9343416b95",
+      "lines": 425,
+      "bytes": 16082
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/providers/google.py",
+      "sha256": "1f9991487d687e4b819df8076732e007e8c77a0ab2182224d7bb80e42555cd60",
+      "lines": 196,
+      "bytes": 7802
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/_hosts.py",
+      "sha256": "c191ccb7b7cf37537eb1fd93efe6e55c23470dcebfc91abca5641e632c87cd14",
+      "lines": 172,
+      "bytes": 8429
+    },
+    {
+      "File": "pydantic-ai/pydantic_ai_slim/pydantic_ai/ui/_web/api.py",
+      "sha256": "f465b5618836a940612fc59aac321938bc52ef7a4a4f44121a0dabddc2fa2b25",
+      "lines": 249,
+      "bytes": 12237
+    },
+    {
+      "File": "python-sdk/src/mcp/server/auth/handlers/token.py",
+      "sha256": "cbb0b1aa9ef10d7d5ef7b00ffce62fde707609794b52553d4d9954d1c6095d44",
+      "lines": 276,
+      "bytes": 12819
+    },
+    {
+      "File": "python-sdk/src/mcp/shared/path_security.py",
+      "sha256": "3d1b1d3b1ae7af5fc7bcbb6c51ee452b5ac5a6f44bd164c477dfb98df7f47abf",
+      "lines": 177,
+      "bytes": 6402
+    },
+    {
+      "File": "server/music_assistant/__main__.py",
+      "sha256": "5499aefb14d6e707fd582568442357bc92b1656569895c8e328fbb381fd1f838",
+      "lines": 303,
+      "bytes": 11148
+    },
+    {
+      "File": "server/music_assistant/controllers/players/helpers.py",
+      "sha256": "55bb0885afd2342f0cb861b8fe0ee19ba0c5d529aa853bc4a7e956d38c627185",
+      "lines": 186,
+      "bytes": 6941
+    },
+    {
+      "File": "server/music_assistant/helpers/json.py",
+      "sha256": "2f65565976c8ec2f30396d55fa851e2d6c65f521237419e8cb5c5d4d3f8aaca7",
+      "lines": 179,
+      "bytes": 6171
+    },
+    {
+      "File": "server/music_assistant/providers/apple_music/helpers/browse.py",
+      "sha256": "8d9bb707dc9caddb6e1d50f22606c95058227d69b74f9c1df34cf494c6c3a683",
+      "lines": 187,
+      "bytes": 7194
+    },
+    {
+      "File": "server/music_assistant/providers/bose_soundtouch/player.py",
+      "sha256": "6c28a749c8d6ce2b497b47d95dcc74bf32f619e10015d09158000742710b9c6b",
+      "lines": 657,
+      "bytes": 27934
+    },
+    {
+      "File": "server/music_assistant/providers/fastmcp_server/tools/players.py",
+      "sha256": "fd6a758ab282b9e5a53a513bc6c886a687cccf92f2687ea746bf457921f387f1",
+      "lines": 175,
+      "bytes": 7005
+    },
+    {
+      "File": "server/music_assistant/providers/gpodder/__init__.py",
+      "sha256": "b353fc1e145ab040678d25320743379fef35d10778a51f0c443062e78c4aeff1",
+      "lines": 516,
+      "bytes": 21272
+    },
+    {
+      "File": "server/music_assistant/providers/lastfm_scrobble/__init__.py",
+      "sha256": "5135db5be5722d4d414212c969679476a097331bea96612ff40fbb9f4eb5d266",
+      "lines": 253,
+      "bytes": 9777
+    },
+    {
+      "File": "server/music_assistant/providers/musiccast/avt_helpers.py",
+      "sha256": "47838b47919a791206dd543e56f95bdc7fe9ab4c1cf1d171a2320700bfa7dc18",
+      "lines": 179,
+      "bytes": 5596
+    },
+    {
+      "File": "server/music_assistant/providers/musiccast/provider.py",
+      "sha256": "60bbfc31bf734a07533da798bff85f8d05023b41d368fd5dff083747c61239c5",
+      "lines": 256,
+      "bytes": 10079
+    },
+    {
+      "File": "server/music_assistant/providers/nicovideo/services/video.py",
+      "sha256": "6dc1882e838af3ea3b8d7aa2372d4b2ddb5e24a3df33ea75e95d37d5cb069480",
+      "lines": 190,
+      "bytes": 7291
+    },
+    {
+      "File": "server/music_assistant/providers/radio_playlist/__init__.py",
+      "sha256": "9fbeb033db57bb2c27226f02bbc8c6cea2994cdf068f2c8fb6bed5ba679c1551",
+      "lines": 205,
+      "bytes": 8689
+    },
+    {
+      "File": "server/music_assistant/providers/sendspin/synchronizer_role.py",
+      "sha256": "ea39fd335c66cca4acecc329dc245b13f96a1d3b0af91e3c1fefbefcc2a7ab6f",
+      "lines": 183,
+      "bytes": 6556
+    },
+    {
+      "File": "server/music_assistant/providers/sendspin_source/provider.py",
+      "sha256": "4955df722d4686a19d2fdc5f0c8be282f678233e42cce082c1aa0a05258432a2",
+      "lines": 695,
+      "bytes": 31190
+    },
+    {
+      "File": "server/music_assistant/providers/siriusxm/streaming.py",
+      "sha256": "46f9d7b4dfbd2052a73e27a18f22400bf6a5f3472475183f94b7803abb83d61c",
+      "lines": 163,
+      "bytes": 6552
+    },
+    {
+      "File": "server/music_assistant/providers/spotify/backends/librespot.py",
+      "sha256": "37b9b25886c98cf6acfac999e41c1d383d9df5a3b281faad9c98c6f5954239b8",
+      "lines": 191,
+      "bytes": 8154
+    },
+    {
+      "File": "server/music_assistant/providers/spotify_connect/setup_flow.py",
+      "sha256": "318dc73d8235cffbcbb5e8bbc490602b0ee359f50ccf20787fa0cc47c7506008",
+      "lines": 184,
+      "bytes": 6798
+    }
+  ]
+}

@@ -3,60 +3,81 @@
 LONG_MESSAGE_CHAIN_AGENT_PROMPT = """Voce detecta Long message chain.
 
 DEFINICAO:
-Criterio operacional baseado nas saidas DPy: reporte acessos encadeados a atributos de dados com mais de 2 elementos. Conte a base e os atributos consecutivos: obj.a tem 2; obj.a.b tem 3; obj.a.b.c tem 4.
-Nao conte automaticamente todos os pontos ou chamadas da instrucao. O nome de um metodo/funcao que esta sendo chamado nao e um atributo de dados adicional. api.make() e api.Factory().run() nao qualificam por si. obj.a.b() nao equivale a ler obj.a.b: b e o metodo invocado; o acesso de dados obj.a tem somente 2 elementos. Chamadas e indexacoes interrompem a sequencia de atributos; nao some trechos separados, argumentos ou expressoes independentes.
-Procure acessos de dados tambem dentro de argumentos e no lado esquerdo de atribuicoes: consume(obj.a.b) e obj.a.b = value qualificam. Uma chamada envolvente nao elimina a cadeia em seu argumento.
-Reporte a cadeia maximal uma unica vez, sem duplicar seus prefixos: obj.a.b.c gera uma ocorrencia de tamanho 4, nao outra para obj.a.b. Line_no e a linha inicial da instrucao que contem o acesso, inclusive em atribuicoes multilinha. Use Method da funcao envolvente.
+No escopo de funções/métodos, examine cadeias de atributos diretamente em valores/alvos de atribuição, expressões avulsas e argumentos posicionais de chamadas. Conte a base: obj.a.b tem 3 e excede 2. Para a base self: self.a.b não qualifica; self.a.b.c qualifica. cls.a.b e this.a.b qualificam. Ignore acessos em condições de if, iteráveis de for, return, argumentos nomeados, expressões binárias, indexações e fora de funções. Não reporte cadeias usadas como alvo de chamada, nem seus prefixos: obj.a.b.c.d() não qualifica; não remova o método para contar o restante. consume(obj.a.b) qualifica; consume(value=obj.a.b) não. Chamadas e indexações não conectam trechos separados. Reporte só a cadeia maximal, sem repetir prefixos; Line_no é a linha inicial da instrução que contém o acesso.
+Use Method da função envolvente.
 
 PROCESSO:
-1. Leia o arquivo inteiro, examinando valores, alvos de atribuicoes e argumentos.
-2. Para cada candidato, identifique o trecho exato e separe atributos de dados de metodos invocados.
-3. Confira a contagem antes de incluir o item. Descreva o trecho e a contagem em Description.
+1. Leia o arquivo inteiro, respeitando os contextos elegíveis e as exclusões acima.
+2. Para cada candidato, identifique o trecho de atributos de dados; não aproveite prefixos de alvos invocados.
+3. Confira se o critério é atendido. Em Description, cite apenas o trecho como evidência curta.
 4. Reporte todas as ocorrencias qualificadas, sem limite artificial de quantidade.
 5. Use a numeracao a esquerda de | como referencia; nao inclua essa numeracao na medida.
 
 EXEMPLO POSITIVO:
 ```python
-value = session.options.timeout
+def check(session):
+    value = session.options.timeout
 ```
 Saida:
 ```json
-{"detected":true,"detections":[{"Method":"","Line_no":"1","chain_length":3,"threshold":2,"Smell":"Long message chain","Description":"session.options.timeout: base session + atributos options e timeout = 3 elementos.","detected":true}]}
+{
+  "detected": true,
+  "detections": [
+    {
+      "Method": "check",
+      "Line_no": "2",
+      "Smell": "Long message chain",
+      "Description": "Ocorrência de long message chain no trecho indicado, acima do limite definido.",
+      "detected": true
+    }
+  ]
+}
 ```
 
 EXEMPLO NEGATIVO:
 ```python
-value = session.options
+def check(session):
+    value = session.options
 ```
 Saida: {"detected":false,"detections":[]}
 
 EXEMPLO POSITIVO EM ARGUMENTO:
 ```python
-consume(session.options.timeout)
+def check(session):
+    consume(session.options.timeout)
 ```
-Saida: uma ocorrencia para session.options.timeout, chain_length=3, Line_no=1. consume nao entra na contagem.
+Saida: uma ocorrencia para session.options.timeout, Method=check, Line_no=2. consume nao entra na contagem.
 
 EXEMPLO NEGATIVO COM CHAMADA:
 ```python
-value = library.Widget.build(3)
+def check(library):
+    value = library.Widget.build(3)
 ```
-Saida: {"detected":false,"detections":[]}. build e invocado; library.Widget tem 2 elementos de acesso de dados. O argumento 3 nao entra na cadeia.
+Saida: {"detected":false,"detections":[]}. A cadeia é alvo de chamada; não conte seu prefixo como outra ocorrência. O argumento 3 não entra na cadeia.
 
 EXEMPLO POSITIVO NO ALVO DA ATRIBUICAO:
 ```python
-session.options.timeout = value
+def check(session, value):
+    session.options.timeout = value
 ```
-Saida: uma ocorrencia para session.options.timeout, chain_length=3, Line_no=1. Nao ignore o lado esquerdo.
+Saida: uma ocorrencia para session.options.timeout, Method=check, Line_no=2. Nao ignore o lado esquerdo.
 
 EXEMPLO NEGATIVO COM CHAMADAS SUCESSIVAS:
 ```python
-value = library.Widget().build()
+def check(library):
+    value = library.Widget().build()
 ```
 Saida: {"detected":false,"detections":[]}. Nao transforme a sequencia de chamadas em uma cadeia de atributos de dados.
+
+CONTRASTES OPERACIONAIS ADICIONAIS:
+- Em atribuição direta, x = self.a.b não qualifica; x = self.a.b.c qualifica.
+- consume(session.options.timeout) qualifica; consume(value=session.options.timeout) não, pois é argumento nomeado.
+- if session.options.timeout: não qualifica como chain na condição, mesmo contendo três elementos.
 
 CONTRATO DE RESPOSTA (schemas Pydantic do projeto):
 Retorne somente um objeto JSON com detected (booleano) e detections (lista). Se nao houver ocorrencias, use detected=false e detections=[]. Se houver, use detected=true.
 Cada item deve conter detected=true, Smell="Long message chain", Method (nome da funcao envolvente ou string vazia fora de funcao), Line_no (numero decimal da linha do codigo fornecido, como string ou inteiro) e Description (descricao nao vazia).
-Inclua chain_length (inteiro com a medida) e threshold=2. Somente medidas estritamente maiores que 2 qualificam. Nao altere o threshold.
 Nao copie entidades dos exemplos para a resposta. Nao invente nomes, linhas ou ocorrencias para preencher a lista.
+
+Aplique o limiar para decidir se há smell. Reporte localização e evidência curta; não calcule nem devolva a medida exata, threshold, intervalos ou contagens intermediárias.
 """

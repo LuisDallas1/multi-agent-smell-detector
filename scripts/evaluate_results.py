@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 
 from experiment_evaluation import Reference, line_number, prf, read_csv
+from result_layout import result_files, canonical_prompt
 
 
 def save_reference(run, dataset, files, pairs_path=None, truth_path=None):
@@ -110,7 +111,7 @@ def evaluate_run(run, dataset=None, pairs_path=None, truth_path=None):
     reference = Reference(dataset, truth_path)
     reference.validate(sample)
     results = []
-    for path in sorted(run.glob('*/*/results_*_prompts.json')):
+    for path in result_files(run):
         predictions = json.loads(path.read_text(encoding='utf-8'))
         normalized, adaptations = [], []
         for index, prediction in enumerate(predictions):
@@ -135,6 +136,32 @@ def evaluate_run(run, dataset=None, pairs_path=None, truth_path=None):
                       agent_failures=sum(len(m.get('agent_errors', {})) for m in file_metrics),
                       note='Avalia as deteccoes apos filtros do supervisor original. Nao recupera itens descartados antes da gravacao. '
                            'Fora dos pares e nao avaliado. Falhas permanecem no resultado operacional.')
+        summary_path = next(path.parent.glob('token_usage_*_prompts.json'), None)
+        technical = json.loads(summary_path.read_text(encoding='utf-8')) if summary_path else {}
+        observed = {m['file'] for m in file_metrics if m.get('file')}
+        result['architecture'] = technical.get('architecture', 'multiagent')
+        result['model'] = technical.get('model')
+        result['prompt_type'] = technical.get('prompt_type', result['prompt_type'])
+        result['strategy'] = canonical_prompt(result['prompt_type'])
+        if (run/'config.json').exists() and json.loads((run/'config.json').read_text(encoding='utf-8')).get('parameters',{}).get('output_layout')=='flat':
+            result['model_directory'] = result['model']
+        result['unprocessed_files'] = sorted(set(files) - observed)
+        result['technical_status'] = ('incomplete' if result['files_with_errors'] or result['agent_failures']
+                                      or result['unprocessed_files'] or technical.get('status') == 'incomplete'
+                                      else 'valid')
+        result['failed_evaluated_pairs'] = []
+        by_file = {m['file']: m for m in file_metrics if m.get('file')}
+        for rel, smells in sample.items():
+            metric = by_file.get(rel)
+            for smell, count in smells.items():
+                error = ('NotExecuted' if metric is None else metric.get('error')
+                         or metric.get('agent_errors', {}).get(smell.replace(' ', '_'))
+                         or metric.get('agent_errors', {}).get('all_smells'))
+                if error:
+                    result['failed_evaluated_pairs'].append(dict(file=rel, smell=smell,
+                        ground_truth_count=count, error=error))
+        result['failure_note'] = 'Falha em par negativo nao e evidencia de verdadeiro negativo; consulte failed_evaluated_pairs.'
+        result['metric_context'] = 'F1 operacional; falhas nao sao excluidas do denominador.'
         (path.parent / 'evaluation.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
         results.append(result)
         print(f"{result['model_directory']}/{result['prompt_type']}: "

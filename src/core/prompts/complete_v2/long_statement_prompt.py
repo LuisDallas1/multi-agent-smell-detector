@@ -1,15 +1,16 @@
-"""Prompt do especialista alinhado ao protocolo DPy; estrutura original preservada."""
+"""Completo V2: regra DPy, exemplos e resposta por localização."""
 
 LONG_STATEMENT_AGENT_PROMPT = """Voce detecta Long statement.
 
 DEFINICAO:
-Instrucao completa com mais de 80 caracteres. Se uma atribuicao, chamada ou expressao ocupar varias linhas fisicas, examine a instrucao inteira, incluindo strings de dados. Nao conte a numeracao adicionada, comentarios isolados ou docstrings isoladas como instrucoes de codigo. Line_no e a linha inicial da instrucao.
+Instrução normalizada com >80 bytes UTF-8, não linha física. Considere instruções multilinha como uma ocorrência na linha inicial; não conte numeração, comentários ou espaços supérfluos. Strings, docstrings de módulo/função e atribuições globais podem qualificar. Exclua assinaturas de def/async def, cabeçalhos de controle, docstrings e campos diretamente em classe e instruções no corpo de case de match. Ignore imports diretamente no módulo; imports dentro de função ou de if no módulo podem qualificar. Uma atribuição com string multilinha é UMA instrução, não uma ocorrência por linha do conteúdo.
+Estas particularidades são operacionais do detector, não regras conceituais gerais de qualidade de código.
 
 PROCESSO:
 1. Leia o arquivo inteiro e procure este tipo independentemente dos demais.
-2. Confira a regra e as medidas de cada ocorrencia.
+2. Decida se cada instrução satisfaz a regra. Não calcule nem devolva o comprimento exato, somas de bytes ou contagens intermediárias.
 3. Reporte todas as ocorrencias reais, sem limite artificial de quantidade.
-4. Use a numeracao a esquerda de | como referencia, sem inclui-la nas medidas.
+4. Use a numeracao a esquerda de | apenas como referencia de localização.
 
 EXEMPLO POSITIVO:
 ```python
@@ -23,8 +24,6 @@ Saida:
     {
       "Method": "",
       "Line_no": "1",
-      "line_length": 83,
-      "threshold": 80,
       "Smell": "Long statement",
       "Description": "Long statement na linha indicada.",
       "detected": true
@@ -42,6 +41,6 @@ Saida: {"detected":false,"detections":[]}
 CONTRATO DE RESPOSTA (schemas Pydantic do projeto):
 Retorne somente um objeto JSON com detected (booleano) e detections (lista). Se nao houver ocorrencias, use detected=false e detections=[]. Se houver, use detected=true.
 Cada item deve conter detected=true, Smell="Long statement", Method (nome da funcao envolvente ou string vazia fora de funcao), Line_no (numero decimal da linha do codigo fornecido, como string ou inteiro) e Description (descricao nao vazia).
-Inclua line_length (inteiro com a medida) e threshold=80. Somente medidas estritamente maiores que 80 qualificam. Nao altere o threshold.
+Description deve apontar a evidência no código, sem medida numérica. O critério continua estritamente >80 bytes; igualdade não qualifica. Não acrescente campos de comprimento ou limiar à resposta.
 Nao copie entidades dos exemplos para a resposta. Nao invente nomes, linhas ou ocorrencias para preencher a lista.
 """

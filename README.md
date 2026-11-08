@@ -1,162 +1,197 @@
-# Detector de implementation smells — versão 2.0
+# Detector de implementation smells — TCC 2.0
 
-Esta versão parte da implementação de Estevam, substitui o dataset e introduz avaliação por ocorrência contra o gabarito DPy. Este documento descreve o código atual e suas diferenças em relação ao original; não apresenta resultados experimentais.
+Comparação entre supervisor com 11 especialistas e agente único para detectar 11 implementation smells em Python, usando o DPy como referência operacional. As duas arquiteturas usam LangChain, respostas validadas com Pydantic e o mesmo motor de execução, persistência e avaliação. A coleta definitiva ainda não começou.
 
-A base de desenvolvimento é `MeuProjeto/multi-agent-smell-detector`. `ProjetoEstevam/multi-agent-smell-detector` conserva o código original do commit `afb065c`, para consulta. Referências bibliográficas, corpus minerado e dados de origem foram preservados.
+Este README reúne a documentação ativa.
 
-## Arquitetura preservada
+## Experimento
 
-O fluxo continua sendo: arquivo Python → supervisor → 11 especialistas → respostas Pydantic → filtros e metadados → resultados. Cada especialista procura um único smell. O supervisor coordena as chamadas deterministicamente; não é uma LLM adicional que escolhe os agentes ou julga as respostas.
-
-Continuam em uso `langchain_openai.ChatOpenAI`, `with_structured_output(schema, method="json_mode")`, schemas Pydantic e três conjuntos de prompts identificados por origem. A API FastAPI original foi preservada; o experimento e sua avaliação são executados pelo comando abaixo, não pela API.
-
-Todos os 11 especialistas recebem cada arquivo selecionado, mesmo quando determinado par não participa da avaliação. O gabarito não é enviado às LLMs. Tokens abrangem todas as chamadas, não apenas os pares avaliados. Ainda não há uma implementação experimental de agente único nesta base.
-
-## Mudanças no código do Estevam
-
-| Arquivo ou área | Mudança |
+| Item | Configuração |
 | --- | --- |
-| `src/core/supervisor/supervisor.py` | Modelo, tokens, temperatura, timeout, retries, concorrência, reasoning e provedor passaram a ser parâmetros. Um semáforo limita especialistas simultâneos. Erros e tokens são registrados por agente. Autenticação inválida interrompe a rodada; truncamento descarta a resposta incompleta e é registrado como falha. |
-| `src/core/schemas/agent_response.py` | Thresholds usam tabela comum. Complex conditional passou de 3 no schema para 2; Long statement passou de 120 para 80. Magic number ganhou `number` opcional. Estrutura Pydantic e campos opcionais originais foram preservados. |
-| `src/core/smell_rules.py` | Novo módulo de thresholds fixos e exceções numéricas. O modelo não pode redefinir o limiar aplicado pelos filtros. |
-| `src/core/utils/detection_validator.py` | Filtros alinhados aos thresholds; Magic number exclui somente 0, 1 e -1; identificadores dunder não são descartados apenas por serem dunder; acrescentado filtro de comprimento de Long method. Permanecem fallbacks originais que aceitam algumas respostas sem medida verificável. |
-| `src/core/prompts/` | Três subpastas: `simple_estevam`, `complete_estevam` e `complete_v2`, com 11 prompts em cada. Os dois primeiros preservam o original com thresholds atualizados; o terceiro contém as revisões descritas abaixo. |
-| `src/core/supervisor/agent_config.py` | Seleciona explicitamente um dos três conjuntos, mantendo os mesmos especialistas e schemas. Conjuntos desconhecidos geram erro. |
-| `scripts/run_experiment.py` | Único comando principal, instancia diretamente o supervisor e seleciona arquivos. Substitui os quatro comandos redundantes de execução. Não há outro transporte ou detector intermediário. |
-| `scripts/experiment_evaluation.py` | Correspondência um a um entre previsões e ocorrências DPy, com regras por smell. |
-| `scripts/evaluate_results.py` | Congela o gabarito e calcula métricas automaticamente ou offline. Normaliza somente campos declarados pelo modelo. |
-| `scripts/sample_dataset.py` | Prepara a amostra a partir do corpus e das saídas DPy, incluindo seleção de pares positivos por smell. Não é executado durante a detecção. |
+| Arquiteturas | Multiagente: supervisor determinístico e 11 especialistas; único: uma tarefa com 11 grupos obrigatórios |
+| Estratégias | `simple_v2`, com regras curtas e contrato; `complete_v2`, com definições, processo e exemplos |
+| Matriz | 3 LLMs × 2 arquiteturas × 2 prompts = 12 condições |
+| Repetições | Uma execução por condição |
+| Dataset | Mesmos 182 arquivos em todas as condições |
+| Avaliação selecionada | 603 células (arquivo, smell): 312 positivas e 291 negativas; 450 ocorrências de referência |
+| Métrica principal | Micro-F1 por ocorrência nos pares selecionados |
+| Tarefas iniciais | 2.002 por condição multiagente; 182 por condição única; total 13.104 |
+| Ordem | Multiagente antes do único; GPT → DeepSeek → Haiku; simples antes do completo; arquivos sequenciais |
 
-Normalizar campos significa, por exemplo, usar `start_line` quando falta a linha de um método ou extrair o valor numérico da descrição da própria previsão. O avaliador não usa o gabarito para completar uma previsão. Não há adaptador de outra arquitetura nesta execução.
+Todos os 11 especialistas são executados em cada arquivo. O agente único procura todos os tipos. O gabarito só entra na avaliação posterior; não seleciona agentes, não fornece localizações ao modelo e não corrige previsões. O custo abrange a execução completa, inclusive previsões fora do escopo e tentativas inválidas.
 
-Padrões: 8.192 tokens de saída por chamada, temperatura 0, timeout de 120 segundos, dois especialistas simultâneos e zero retries adicionais. `--reasoning default` omite o parâmetro; não significa raciocínio desativado. `--provider` permite fixar o provedor sem fallback.
+As arquiteturas reutilizam o motor em `src/core/execution`, schemas e avaliador. Os prompts de `src/core/prompts/simple_v2` e `complete_v2` contêm suas regras diretamente. O agente único incorpora integralmente essas seções pelo builder em `src/core/single_agent/prompts`, alterando o envelope para os 11 grupos. Não há adaptador HTTP substituindo LangChain, segmentação automática dos arquivos ou ferramentas de análise estática fornecidas à LLM. São tetos de tokens por chamada distintos por arquitetura, não computação equivalente.
 
-## Novo dataset
+## Modelos e parâmetros
 
-A amostra fornecida contém 182 arquivos, 312 pares positivos `(arquivo, smell)`, 450 ocorrências positivas e 291 pares negativos. O manifesto tem 603 pares. O balanceamento é dos pares selecionados, não de todos os smells existentes nos arquivos.
+| Apelido | ID enviado | Endpoint fixo | Raciocínio | Temperatura | Seed |
+| --- | --- | --- | --- | --- | --- |
+| `gpt-6-luna` | `openai/gpt-6-luna` | `openai` | low | omitida | 42 |
+| `deepseek-v4.1-flash` | `deepseek/deepseek-v4.1-flash` | `deepinfra/fp8` | low | 0 | 42 |
+| `claude-haiku-5.5` | `anthropic/claude-haiku-5.5` | `anthropic` | low | omitida | omitida |
 
-| Local | Finalidade |
-| --- | --- |
-| `dataset/` | Arquivos disponíveis ao experimento. |
-| `dataset/ground_truth/sample_pairs.csv` | Pares positivos selecionados. |
-| `dataset/ground_truth/evaluation_pairs.csv` | Pares positivos e negativos avaliados, com contagens. |
-| `dataset/ground_truth/dpy_implementation_smells_sample.csv` | Ocorrências dos pares selecionados, com localização e descrição. |
-| `dataset/ground_truth/evaluation_manifest.json` | Metadados e política de seleção dos pares. |
-| `dataset/sample_*.csv` e `dataset/sample_config.json` | Estatísticas e proveniência da amostragem. |
-| `dataset_full/` | Corpus minerado; não é o dataset padrão da execução. |
-| `results/dpy/` | Saídas brutas DPy que deram origem ao gabarito; não são resultados desta versão. |
+Parâmetros omitidos seguem a política de capacidades adotada, não equivalem a zero. Low não significa a mesma quantidade de computação nos três modelos. Temperatura e seed não garantem reprodução exata. O endpoint é fixado sem fallback. O preflight público verifica capacidades antes de carregar credenciais na execução real; o dry-run é offline e não faz essa consulta.
 
-Um arquivo pode ter ocorrências fora de seus pares selecionados. Os 603 pares, portanto, não representam os 182 × 11 pares possíveis. Caminhos relativos completos identificam arquivos; módulos homônimos de projetos diferentes não são combinados.
-
-O código original incluía análises em notebooks por presença e contagem agregada. A métrica principal desta versão compara ocorrências localizadas contra o DPy.
-
-## Conjuntos de prompts
-
-| Nome de execução | Pasta | Conteúdo |
+| Política | Multiagente | Agente único |
 | --- | --- | --- |
-| `simple_estevam` | `src/core/prompts/simple_estevam/` | Simple original, alterando somente Long statement de 120 para 80. |
-| `complete_estevam` | `src/core/prompts/complete_estevam/` | Complete original, alterando somente Long statement de 120 para 80. |
-| `complete_v2` | `src/core/prompts/complete_v2/` | Complete revisado desta versão, preservado integralmente. |
+| Tokens iniciais | 8.192 por especialista | 32.768 para os 11 grupos |
+| Recuperação por truncamento | diretamente 32.768 | 32.768 |
+| Repetições adicionais de resposta | 1 | 1 |
+| Retries SDK | 0 | 0 |
+| Concorrência de tarefas | 2 | 2 (há só uma tarefa por arquivo) |
+| Timeout configurado no cliente | 120 segundos | 120 segundos |
+| Formato | JSON mode + Pydantic | JSON mode + Pydantic |
 
-Cada conjunto tem 11 especialistas. Os originais preservam exemplos, formato, teto de detecções e exclusões semânticas; não recebem as outras correções do V2. Schemas, filtros do supervisor e avaliação são compartilhados. As diferenças de definição além dos thresholds continuam presentes e fazem parte da comparação.
+O timeout do cliente não é um teto global de duração da tarefa. Respostas inválidas podem usar a repetição prevista; o orçamento aumenta somente por truncamento. A normalização remove apenas uma cerca Markdown externa; não repara JSON parcial. O contrato `occurrence-v4-identity-location` exige identidade, localização e evidência curta, sem medidas exatas. `identifier_name` e `number` continuam obrigatórios para seus tipos. Não há pós-filtro numérico para excluir previsões erradas.
 
-O padrão do comando experimental é `complete_v2`. `--prompt-type all` executa os três conjuntos nos mesmos arquivos. Resultados e cópias dos prompts são separados pelo nome do conjunto. A API e as funções auxiliares do supervisor usam `simple_estevam` por padrão.
+## Dataset, gabarito e F1
 
-## Mudanças no complete V2
+`dataset/` contém os arquivos selecionados. `dataset_full/` conserva os repositórios de origem, o executável DPy e sua configuração. Não regenere a amostra durante a coleta.
 
-A tabela abaixo descreve somente `complete_v2`. Ela não se aplica aos dois conjuntos preservados de Estevam. As definições de referência estão em `smells.md`.
-
-| Smell | Critério e alteração relevante |
+| Insumo | Uso |
 | --- | --- |
-| Long lambda function | Mais de 80 caracteres; exemplos de comprimento coerente. |
-| Long statement | Mais de 80 caracteres, substituindo 120. O prompt atual considera a instrução completa, inclusive multilinha e strings de dados, e pede a linha inicial. |
-| Long method | Mais de 67 linhas; identifica a própria função, com `Line_no` e `start_line` na linha de `def`/`async def`. |
-| Long parameter list | Mais de 4 parâmetros. Mantidas as exclusões originais de `self`, `cls`, `*args` e `**kwargs`. |
-| Long identifier | Mais de 20 caracteres; resposta pede `identifier_name` e comprimento. |
-| Complex method | Complexidade ciclomática de McCabe maior que 7; localização na definição da função. |
-| Complex conditional | Mais de 2 operadores `and`/`or` na mesma condição; schema e contrato coerentes com esse limite. |
-| Long message chain | Mais de 2 elementos no acesso a atributos de dados, contando base e atributos. O original contava métodos com parênteses e excluía atributos. Agora distingue nomes invocados de atributos de dados, interrompe a sequência em chamadas/indexações, procura em argumentos e alvos de atribuição e evita duplicar prefixos. O complete apresenta positivos e negativos em igual quantidade. Essa interpretação foi inferida das saídas DPy disponíveis, não certificada pelo código-fonte do detector. |
-| Empty catch block | `except` com somente `pass` ou uma única instrução `return`, com ou sem valor. Outros comandos impedem a classificação. |
-| Missing default | `match` sem `case _`. |
-| Magic number | Literal sem constante nomeada, exceto 0, 1 e -1. Retiradas exclusões gerais do original para testes, índices, contadores, 2/10/100 e contextos matemáticos. Resposta inclui `number`. |
+| `dataset/ground_truth/evaluation_pairs.csv` | Define exatamente quais células serão avaliadas e sua contagem |
+| `dataset/ground_truth/dpy_implementation_smells_sample.csv` | Ocorrências DPy dessas células |
+| `dataset/ground_truth/evaluation_manifest.json` | Proveniência e configuração da avaliação |
+| `dataset/ground_truth/dpy_raw/` | Exportações originais DPy preservadas, usadas na auditoria do gabarito |
+| `dataset/sample_config.json`, quando presente | Proveniência da amostragem |
 
-Foi removido o teto artificial de dez detecções. Os prompts pedem todas as ocorrências qualificadas, o que pode aumentar tokens e truncamentos. Foram explicitados `detected`, `detections`, `Smell`, `Method`, `Line_no`, `Description` e as medidas do schema. A numeração fornecida com o código serve somente para localização.
+Uma célula é um par (arquivo, tipo de smell), não uma ocorrência. Na célula positiva, as ocorrências de referência participam da correspondência um a um: previsão correspondente = TP; referência sem previsão = FN; previsão sem referência = FP. A correspondência usa a identidade/localização específica do tipo no avaliador compartilhado, não a quantidade total detectada nem a medida numérica declarada pelo modelo.
 
-As medidas continuam propostas pela LLM e filtradas pelo código existente; não foi introduzido um detector estático completo para substituir as respostas. Contagem de linhas de funções, instruções, Magic number e Long message chain ainda exigem validação metodológica contra o DPy antes de conclusões do experimento.
+Na célula negativa, uma ocorrência prevista é FP; ausência de previsão numa resposta válida confirma ausência na análise por presença. Uma tarefa falha não confirma TN. Células não selecionadas são ignoradas no F1, mesmo que o modelo encontre nelas ocorrências reais; suas previsões e custos permanecem registrados. TN é uma noção por presença/célula, não por ocorrência individual; não se calcula uma infinidade de TN por linhas sem smell.
 
-## Avaliação
+O F1 operacional é `2TP / (2TP + FP + FN)`, acompanhado de taxa de respostas válidas, falhas e cobertura. Falhas sem previsões podem deixar referências como FN no resultado operacional, sem afirmar que a resposta válida teria sido negativa. Análises de respostas válidas e subconjuntos comuns são complementares e precisam declarar a cobertura. Compare condições nos mesmos arquivos/células, usando reamostragem pareada por arquivo.
 
-A métrica principal é micro-F1 por ocorrência nos pares do manifesto:
+A amostragem não torna representativos todos os repositórios Python. Há arquivos usados na exploração dentro dos 182 arquivos finais: o conjunto não é independente do desenvolvimento dos prompts. O DPy é a referência operacional escolhida, não uma certificação de verdade universal. Não atribuir ao artigo todas as peculiaridades descobertas no executável.
 
-`Precisão = TP / (TP + FP)`
+## Definições dos smells
 
-`Recall = TP / (TP + FN)`
+Os limiares são estritos: igualdade não qualifica. As regras abaixo resumem os prompts; o conteúdo congelado dos próprios arquivos determina as instruções enviadas.
 
-`F1 = 2 × TP / (2 × TP + FP + FN)`
+| Smell | Critério |
+| --- | --- |
+| Long lambda function | Expressão lambda com mais de 80 caracteres |
+| Long statement | Instrução normalizada com mais de 80 bytes UTF-8 nos controles do detector; não linha física |
+| Long method | Função com mais de 67 linhas |
+| Long parameter list | Mais de 4 parâmetros; prompts excluem self, cls, *args e **kwargs |
+| Long identifier | Identificador com mais de 20 caracteres |
+| Complex method | Complexidade ciclomática de McCabe maior que 7 |
+| Complex conditional | Mais de 2 operadores and/or na mesma condição |
+| Long message chain | Mais de 2 elementos nos contextos operacionais elegíveis, com particularidades abaixo |
+| Empty catch block | Except contendo somente pass ou uma instrução return |
+| Missing default | Match sem case _ incondicional |
+| Magic number | Literal numérico no escopo elegível, exceto 0, 1, -1 e equivalentes decimais |
 
-- TP: previsão corresponde a uma ocorrência ainda não utilizada do gabarito.
-- FP: previsão sem correspondência em um par avaliado, inclusive se o par é negativo.
-- FN: ocorrência do gabarito sem previsão correspondente.
-- Fora do escopo: previsão em par não selecionado; não entra como TP nem FP.
+Particularidades confirmadas por controles caixa-preta:
 
-A correspondência é um a um. Previsões duplicadas não criam TPs adicionais. Além do mesmo arquivo e smell, o avaliador usa:
+- **Statement:** pode ser multilinha. Strings, docstrings de módulo/função e atribuições globais podem qualificar. Excluem-se assinaturas de funções, cabeçalhos de controle, docstrings e campos diretamente em classe e instruções no corpo de case. Imports diretamente no módulo foram excluídos; imports dentro de função ou de if no módulo podem qualificar. Numeração, comentários e espaços supérfluos não entram. `ast.unparse` não foi demonstrado equivalente à normalização interna do detector.
+- **Chain:** atribuições diretas (valores/alvos), expressões avulsas e argumentos posicionais qualificaram. `obj.a.b`, `cls.a.b` e `this.a.b` qualificaram; `self.a.b` não, mas `self.a.b.c` sim. Cadeias usadas como alvo de chamada não qualificaram, nem seus prefixos: `obj.a.b.c.d()` foi negativo. Condições de if, iteráveis de for, return, argumentos nomeados, expressões binárias, indexações e acessos fora de funções foram negativos nos casos testados. Não contar todo ponto como elemento elegível.
+- **Magic number:** a política atual inclui defaults, índices, fatias, testes e cálculos no escopo de funções; exclui booleanos, literais fora de funções e dentro de chamadas, inclusive argumentos. Maiúsculas locais não isentam. Para negativo, a saída identifica o literal interno sem o sinal unário; ocorrências repetidas são preservadas.
+- **Catch:** logging, raise, atribuição ou outro comando adicional impede a classificação pela regra de corpo isolado.
 
-- Métodos: linha da definição e nome da função.
-- Identificadores: nome e função envolvente; fora de função, nome e linha. Isso acomoda registros DPy ancorados na função.
-- Empty catch block e Missing default: bloco localizado por AST. Se o gabarito indica apenas a linha da função, associa um bloco qualificante daquela função, respeitando a resolução do gabarito.
-- Magic number: linha e valor numérico.
-- Demais tipos: linha inicial registrada.
+A investigação do DPy não dá acesso à implementação interna nem prova equivalência completa para todos os programas. Os prompts não pedem que a LLM conheça o nome/versão do detector; as regras relevantes são explícitas.
 
-Macro-F1 considera os tipos com positivos ou erros e informa quantos entraram na média. Tipos só negativos e perfeitamente classificados não recebem F1 artificial de 1. Presença e contagem são diagnósticos complementares.
+## Execução
 
-Falhas técnicas são registradas separadamente. No F1 operacional, o par continua avaliado quando o agente falha; ocorrências não encontradas permanecem FN. São avaliadas as detecções após os filtros do supervisor; itens descartados antes da gravação não são recuperados.
+Use o ambiente com as dependências de `pyproject.toml`/`uv.lock` e o runtime do manifesto. Alterações em fontes, dependências, prompts, arquivos e runtime invalidam a verificação. A instalação de dependências é separada; o dry-run não instala nem atualiza pacotes.
 
-Avaliar todos os smells de todos os arquivos exige outro manifesto e gabarito completo. Não basta ampliar os pares usando o CSV amostrado, pois ele omite ocorrências fora da seleção. Uma avaliação completa deve ser identificada separadamente.
-
-## Como executar
-
-Use a raiz deste projeto, com as dependências de `pyproject.toml` instaladas. O script de amostragem também requer NumPy e pandas. Configure credenciais localmente ou por variáveis de ambiente; elas não são gravadas nos resultados.
-
-Conferir seleção, tarefas e gabarito sem carregar credenciais ou chamar LLMs:
+O manifesto ativo é `experiment/final/frozen_protocol.json`, com seleção em `frozen_files.json`. Conferência sem credenciais, rede LLM ou custo:
 
 ```powershell
-python scripts/run_experiment.py --model gpt-6-luna --max-files 5 --prompt-type complete_v2 --dry-run
+python -B scripts/frozen_study.py
+python -B scripts/run_study.py --dry-run
+python -B scripts/audit_dpy.py
 ```
 
-Executar uma seleção limitada:
+Coleta completa, com chamadas pagas. O exemplo abaixo define uma pasta de saída no diretório pessoal do usuário; a variável `$saida` é reutilizada nos comandos de retomada e análise:
 
 ```powershell
-python scripts/run_experiment.py --model gpt-6-luna --max-files 5 --seed 1 --prompt-type complete_v2
+$saida = Join-Path $HOME 'TCC-results/final_experiment'
+python -B scripts/run_study.py --output-dir "$saida"
 ```
 
-Executar três modelos na mesma seleção:
+O destino padrão dos executores é a pasta `TCC-results` no diretório pessoal do usuário. Use `--output-dir` para escolher outro destino e não sobrescreva uma pasta de coleta existente. As credenciais são carregadas internamente somente na execução real; não integram manifestos, logs ou snapshots. O `.env` não deve ser exibido, versionado ou arquivado.
+
+Para executar uma arquitetura/LLM de cada vez sem alterar a seleção, use o executor nativo. Exemplo pago do multiagente, GPT e ambos os prompts:
 
 ```powershell
-python scripts/run_experiment.py --models gpt-6-luna deepseek-v4.1-flash gemini-3.5-flash-lite --max-files 20 --seed 1 --prompt-type complete_v2
+python -B scripts/frozen_study.py
+python -B scripts/run_experiment.py --architecture multiagent --model gpt-6-luna --prompt-type paired --generation-profile experiment --response-format json_mode --json-normalization markdown_fence --output-layout flat --files-from experiment/final/frozen_files.json --all-files --max-tokens 8192 --max-retry-tokens 32768 --response-retries 1 --max-retries 0 --concurrency 2 --timeout 120 --output-dir "$saida/gpt-6-luna/multiagent"
 ```
 
-Os apelidos são mapeamentos locais de IDs, não garantia de disponibilidade futura. Também é aceito `--model provedor/modelo`. O padrão é até cinco arquivos; `--all-files` seleciona todos os elegíveis. Limites padrão são 3.000 linhas e 500 KB; arquivos excluídos não entram na rodada. A lista efetiva e seus hashes ficam salvos.
+No agente único, trocar arquitetura para `single`, `--max-tokens` para 32768 e a pasta correspondente. Conservar os demais parâmetros e usar os IDs ativos. Essa forma manual não executa a verificação do congelamento automaticamente a cada etapa como `run_study.py`; confira o manifesto antes de cada execução. Não misture execuções manuais com o orquestrador sem conferir seu estado de retomada.
 
-Use `--files-from results/experiments/IDENTIFICADOR/sample.json --all-files` para repetir uma seleção verificando hashes. `--prompt-type all` executa os três conjuntos nos mesmos arquivos. Tarefas planejadas = arquivos × modelos × conjuntos de prompts × 11, sem retries.
+## Falhas, persistência e retomada
 
-Outras opções: `--dataset`, `--env-file`, `--max-tokens`, `--concurrency`, `--sequential`, `--timeout`, `--max-retries`, `--temperature`, `--reasoning`, `--provider`, `--output-dir`, `--evaluation-pairs`, `--ground-truth` e `--no-evaluate`. Consulte `--help`.
+Cada tentativa preserva mensagens/prompt, pedido e resposta HTTP, fragmentos recebidos, metadados, JSON antes/depois de validação, detecções, decisões de extração, erros, tokens, custo e tempos disponíveis. O journal `evidence/` usa eventos numerados, hashes encadeados, índice, temporário, flush e troca atômica. Checkpoints por arquivo permitem reconstruir agregados. Bloqueios transitórios específicos do Windows têm repetição de gravação limitada, sem repetir a API. Erro permanente de escrita interrompe novas chamadas.
 
-O F1 é automático quando manifesto e gabarito estão disponíveis. Para recalcular offline:
+Não é possível garantir a preservação de uma resposta que o serviço não entregou nem de dados ainda não confirmados antes de uma falha física. Chamadas em voo podem ter custo desconhecido. Credenciais e cabeçalhos de autenticação são excluídos; a chave conhecida é redigida. Custo ausente é desconhecido, não zero. `usage.cost` inclui retries quando informado. Não somar custo do journal ao dos checkpoints: há sobreposição. Não inventar rateio por smell no agente único.
+
+Retomada da coleta:
 
 ```powershell
-python scripts/evaluate_results.py --run results/experiments/IDENTIFICADOR
+python -B scripts/run_study.py --resume "$saida"
 ```
 
-Antes das chamadas são salvos seleção, configuração, prompts, hashes de código e cópias dos pares e ocorrências do gabarito. Depois são salvos detecções, tokens, tempos, falhas e métricas. `raw.jsonl` contém resultados por arquivo do supervisor, não o texto bruto das respostas da LLM. O custo em dólares permanece não preenchido; tokens não são convertidos com preços presumidos.
+Código, runtime, prompts e insumos precisam corresponder à rodada. Arquivos confirmados não são repetidos, inclusive os com falha final. Para repetir arquivo interrompido, é necessário acrescentar explicitamente `--retry-interrupted`; isso pode repetir chamadas já cobradas. Não há retomada automática somente dos especialistas restantes dentro desse arquivo. Não use repetição ilimitada para obter resposta melhor. Autenticação, falta de crédito e permissões bloqueiam a continuidade; trabalho recebido permanece salvo.
 
-## Organização
+Cópias na mesma unidade protegem contra exclusão acidental, mas não contra perda física do dispositivo. Guardar o pacote congelado e resultados também em outro local é uma ação separada.
 
-Esta base mantém `src/`, quatro scripts (execução, duas partes da avaliação e amostragem), dataset, corpus minerado, dados DPy, configuração, dependências e `tests/`. Os testes verificam avaliação, seleção, thresholds e preservação de LangChain/Pydantic. São ferramentas de desenvolvimento; o experimento não depende deles.
+## Organização e análise dos resultados
 
-Documentação complementar:
+```text
+TCC-results/final_experiment/
+  sample.json, evaluation_pairs.csv, evaluation_reference.csv
+  frozen_protocol.json, study.json, study_status.json
+  gpt-6-luna/
+    multiagent/simple_v2/ e complete_v2/
+    single/simple_v2/ e complete_v2/
+  deepseek-v4.1-flash/ (mesma organização)
+  claude-haiku-5.5/ (mesma organização)
+  analysis/
+```
 
-- [Definições e thresholds dos smells](smells.md).
-- [Mudanças de cada prompt em relação ao Estevam](MUDANCAS_PROMPTS.md).
-- [Mudanças dos demais arquivos em relação ao Estevam](MUDANCAS_PROJETO.md).
+Cada condição contém previsões, métricas, custos, falhas, prompts, schemas, respostas, journal e checkpoints. A análise pode ser refeita offline sem novas chamadas:
 
-Novas rodadas são gravadas em `results/experiments/`. Análises e resultados do projeto original não integram a implementação da versão 2.0.
+```powershell
+python -B scripts/analyze_study.py --study "$saida"
+```
+
+O pacote gera JSON/CSV/HTML com precisão, recall, micro/macro-F1 e métricas complementares por smell, arquivo, projeto e célula; presença e contagem são análises secundárias. Inclui cobertura técnica, erros por tipo/tentativa, recuperação, tokens, latência, custos conhecidos/desconhecidos e comparações pareadas. A análise registra completude; resultado parcial não vira coleta completa.
+
+Bootstrap pareado por arquivo, 10.000 reamostras, seed 20261106 e IC95% descreve sensibilidade à amostra de arquivos. Não mede variabilidade de novas chamadas LLM, pois há uma execução por condição. Sensibilidade por projeto, McNemar/Holm por presença e fronteiras custo/desempenho são complementares/exploratórias. AUC e calibração não são estimáveis sem escores; não se inventam métricas indisponíveis.
+
+## Scripts mantidos
+
+| Script | Finalidade |
+| --- | --- |
+| `run_study.py` | Orquestrar coleta congelada, dry-run e retomada |
+| `run_experiment.py` | Executor nativo por arquitetura, modelo e prompts; limites de arquivos e dry-run |
+| `frozen_study.py` | Criar e verificar manifestos por hashes, sem sobrescrever congelamento existente |
+| `generation_protocol.py` | Preflight e parâmetros padronizados |
+| `checkpointing.py` | Persistência e retomada por arquivo |
+| `evaluate_results.py`, `experiment_evaluation.py` | Avaliação compartilhada por ocorrência e referência |
+| `analyze_study.py`, `study_metrics.py` | Consolidação e estatísticas offline |
+| `result_layout.py` | Organização e leitura dos resultados |
+| `audit_dpy.py` | Conferir gabarito selecionado contra exportações brutas e fontes |
+| `check_provider.py` | Diagnóstico pago de um arquivo/especialista e endpoint, separado do experimento |
+| `run_validation.py` | Matriz exploratória reduzida; sem congelamento final |
+| `sample_dataset.py` | Reproduzir amostragem; não executar sobre o dataset congelado |
+
+Os testes offline estão em `tests/` e cobrem preservação, interrupção, retomada, avaliação e pareamento. Execute com `python -B -m unittest discover -s tests`. A API em `src/api` é um componente opcional; o ponto de entrada da coleta é `scripts/run_study.py`.
+
+## Histórico experimental consolidado e congelamento
+
+O projeto mantém a estrutura de supervisor/especialistas e LangChain/Pydantic herdada do trabalho anterior. As mudanças centrais são novo dataset minerado/amostrado por pares, comparação com agente único, avaliação por ocorrência, contratos de saída e preservação/controle de falhas e custos. Não se afirma reprodução exata das métricas do trabalho anterior, pois dados e método de avaliação mudaram.
+
+Durante a exploração foram comparados modelos/provedores e formatos de resposta. Qwen e Gemini não integram a seleção ativa. O DeepSeek ativo é o ID original, não o alias 1017. Os resultados antigos pertencem às respectivas versões e não serão reunidos como se fossem uma única coleta final.
+
+Foram retiradas exigências de medidas numéricas exatas e filtros baseados nessas medidas; o contrato atual registra identidade/localização e deixa erros de detecção aparecerem como FP/FN. Raciocínio longo continuou causando truncamentos no DeepSeek. Uma falha de persistência com leitura simultânea revelou um problema de bloqueio/troca de índice no Windows; a escrita ganhou recuperação transitória limitada e o leitor passou a validar um snapshot consistente. A falha original não permite afirmar defeito físico do disco nem identificar seu errno original com certeza.
+
+Na validação geral de três arquivos e 12 condições anterior às últimas correções, nove condições foram integralmente válidas: duas DeepSeek/multiagente tiveram falhas finais e uma Haiku/multiagente foi interrompida por persistência. O custo conhecido foi US$ 0,2945185492, com duas chamadas sem custo completo registrado; não é custo total exato. Essa rodada é evidência exploratória, não resultado definitivo.
+
+A auditoria posterior do DPy 1.7.8 Trial em 36 exemplos mínimos e no arquivo MusicCast reproduziu todas as 18 ocorrências históricas do arquivo, incluindo dez Statement e zero Chain. Ela revelou diferenças de escopo nos prompts. As regras foram corrigidas diretamente no simples/completo e reutilizadas pelo agente único. No diagnóstico pago seguinte, Chain retornou zero ocorrências sem truncar (antes, 12 FP); Statement teve 9 TP, 3 FP e 1 FN (antes da correção de escopo: 9 TP, 8 FP, 1 FN), precisando de recuperação. A comparação é contra DPy bruto completo desse arquivo, fora da pontuação oficial das células selecionadas. Dois especialistas custaram US$ 0,0137619104. Uma rodada/arquivo de desenvolvimento não demonstra desempenho geral.
+
+Depois disso, as referências ao nome/versão do detector foram retiradas dos textos enviados às LLMs, mantendo regras explícitas. A recuperação foi padronizada em 32.768 tokens. A versão atual passou nos 143 testes offline; a auditoria dos 603 pares e o dry-run das 12 condições nos 182 arquivos também foram exercitados na preparação da coleta. Os manifestos ativos estão em `experiment/final/`. Esses checks validam a configuração e as garantias exercitadas, sem garantir ausência de falhas nos serviços externos ou antecipar o desempenho da coleta definitiva.
+
+Congelamento é uma decisão do autor. Seus hashes, runtime, seleção e referências tornam alterações detectáveis; serviços externos/aliases não são congeláveis localmente. Qualquer mudança posterior de fonte, prompt ou insumo requer nova decisão de versão, sem sobrescrever o histórico. 

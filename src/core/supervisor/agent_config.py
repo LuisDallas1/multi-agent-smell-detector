@@ -1,8 +1,9 @@
 """Registro dos 11 especialistas e selecao explicita do conjunto de prompts."""
 from importlib import import_module
 from core.schemas import agent_response as schemas
+from core.prompt_strategies import MULTI_PROMPT_TYPES
 
-PROMPT_TYPES = ("simple_estevam", "complete_estevam", "complete_v2")
+PROMPT_TYPES = MULTI_PROMPT_TYPES
 AGENTS = {
     "complex_method": "MultipleComplexMethodResponse",
     "long_method": "MultipleLongMethodResponse",
@@ -18,7 +19,7 @@ AGENTS = {
 }
 
 
-def get_agent_configs(prompt_type: str = "simple_estevam"):
+def get_agent_configs(prompt_type: str = "simple_v2"):
     """Carrega diretamente os prompts do conjunto solicitado com os mesmos schemas."""
     if prompt_type not in PROMPT_TYPES:
         raise ValueError(f"Conjunto de prompts invalido: {prompt_type}")
@@ -32,4 +33,4 @@ def get_agent_configs(prompt_type: str = "simple_estevam"):
     }
 
 
-AGENT_CONFIGS = get_agent_configs("simple_estevam")
+AGENT_CONFIGS = get_agent_configs("simple_v2")

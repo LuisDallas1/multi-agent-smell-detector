@@ -5,7 +5,7 @@ arquivo, escolhe arquivos ate bater uma cota de ocorrencias por tipo de smell,
 copia os .py escolhidos e gera o gabarito so da amostra.
 
 Sem argumentos, usa os caminhos padrao relativos a raiz do projeto
-(scripts/ ao lado de dataset_full/, results/dpy/jsons/ e dataset/).
+(scripts/ ao lado de dataset_full/ e dataset/ground_truth/dpy_raw/).
 
 Exemplo:
     python sample_dataset.py \
@@ -412,7 +412,7 @@ def main():
                     help="descarta arquivos com mais linhas que isso (padrao: limite do supervisor)")
     args = ap.parse_args()
     if not args.dpy_csv and not args.dpy_json:
-        args.dpy_json = [BASE / "results" / "dpy" / "jsons"]
+        args.dpy_json = [BASE / "dataset" / "ground_truth" / "dpy_raw"]
     if not args.root.is_dir():
         raise SystemExit(f"--root nao encontrado: {args.root}")
 

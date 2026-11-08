@@ -64,6 +64,7 @@ Reporte todas as ocorrencias reais, sem limite artificial de quantidade.
 CONTRATO DE RESPOSTA (schemas Pydantic do projeto):
 Retorne somente um objeto JSON com detected (booleano) e detections (lista). Se nao houver ocorrencias, use detected=false e detections=[]. Se houver, use detected=true.
 Cada item deve conter detected=true, Smell="Complex conditional", Method (nome da funcao envolvente ou string vazia fora de funcao), Line_no (numero decimal da linha do codigo fornecido, como string ou inteiro) e Description (descricao nao vazia).
-Inclua logical_operators (inteiro com a medida) e threshold=2. Somente medidas estritamente maiores que 2 qualificam. Nao altere o threshold.
 Nao copie entidades dos exemplos para a resposta. Nao invente nomes, linhas ou ocorrencias para preencher a lista.
+
+Aplique o limiar para decidir se há smell. Reporte localização e evidência curta; não calcule nem devolva a medida exata, threshold, intervalos ou contagens intermediárias.
 """

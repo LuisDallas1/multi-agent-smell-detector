@@ -7,7 +7,7 @@ Expressao lambda com mais de 80 caracteres, contando desde lambda ate o final da
 
 PROCESSO:
 1. Leia o arquivo inteiro e procure este tipo independentemente dos demais.
-2. Confira a regra e as medidas de cada ocorrencia.
+2. Confira se cada ocorrência satisfaz o critério.
 3. Reporte todas as ocorrencias reais, sem limite artificial de quantidade.
 4. Use a numeracao a esquerda de | como referencia, sem inclui-la nas medidas.
 
@@ -23,10 +23,8 @@ Saida:
     {
       "Method": "",
       "Line_no": "1",
-      "lambda_length": 83,
-      "threshold": 80,
       "Smell": "Long lambda function",
-      "Description": "Long lambda function na linha indicada.",
+      "Description": "Ocorrência de long lambda function no trecho indicado, acima do limite definido.",
       "detected": true
     }
   ]
@@ -42,6 +40,7 @@ Saida: {"detected":false,"detections":[]}
 CONTRATO DE RESPOSTA (schemas Pydantic do projeto):
 Retorne somente um objeto JSON com detected (booleano) e detections (lista). Se nao houver ocorrencias, use detected=false e detections=[]. Se houver, use detected=true.
 Cada item deve conter detected=true, Smell="Long lambda function", Method (nome da funcao envolvente ou string vazia fora de funcao), Line_no (numero decimal da linha do codigo fornecido, como string ou inteiro) e Description (descricao nao vazia).
-Inclua lambda_length (inteiro com a medida) e threshold=80. Somente medidas estritamente maiores que 80 qualificam. Nao altere o threshold.
 Nao copie entidades dos exemplos para a resposta. Nao invente nomes, linhas ou ocorrencias para preencher a lista.
+
+Aplique o limiar para decidir se há smell. Reporte localização e evidência curta; não calcule nem devolva a medida exata, threshold, intervalos ou contagens intermediárias.
 """

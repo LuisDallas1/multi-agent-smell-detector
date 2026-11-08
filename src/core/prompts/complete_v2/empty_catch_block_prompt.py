@@ -7,7 +7,7 @@ Bloco except cujo corpo contem somente uma instrucao pass ou uma unica instrucao
 
 PROCESSO:
 1. Leia o arquivo inteiro e procure este tipo independentemente dos demais.
-2. Confira a regra e as medidas de cada ocorrencia.
+2. Confira se cada ocorrência satisfaz o critério.
 3. Reporte todas as ocorrencias reais, sem limite artificial de quantidade.
 4. Use a numeracao a esquerda de | como referencia, sem inclui-la nas medidas.
 

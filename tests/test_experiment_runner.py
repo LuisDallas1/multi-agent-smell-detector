@@ -61,9 +61,9 @@ class RunnerTests(unittest.TestCase):
     def test_original_supervisor_uses_supplied_model_and_transport_limits(self):
         import asyncio
         from typing import Any, Dict, List
-        path = BASE / 'src/core/supervisor/supervisor.py'
+        path = BASE / 'src/core/execution/engine.py'
         tree = ast.parse(path.read_text(encoding='utf-8'))
-        node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'CodeSmellSupervisor')
+        node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'DetectionEngine')
         recorded = {}
         def fake_model(**kwargs):
             recorded.update(kwargs)
@@ -73,7 +73,11 @@ class RunnerTests(unittest.TestCase):
                       OPENROUTER_API_KEY='dummy', OPENROUTER_BASE_URL='https://example.invalid',
                       OPENROUTER_API_MODEL='fallback'))
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), ns)
-        ns['CodeSmellSupervisor'](model_name='chosen/model', max_tokens=1234, max_retries=0,
+        ns['DetectionEngine']._get_agent_configs = lambda self, kind: {}
+        import sys
+        from unittest.mock import patch
+        with patch.dict(sys.modules, {'config.settings': SimpleNamespace(settings=ns['settings'])}):
+            ns['DetectionEngine'](model_name='chosen/model', max_tokens=1234, max_retries=0,
                                   timeout=17, concurrency=2, reasoning='low', provider='fixed')
         self.assertEqual(recorded['model'], 'chosen/model')
         self.assertEqual(recorded['api_key'], 'dummy')
@@ -81,6 +85,7 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(recorded['max_retries'], 0)
         self.assertEqual(recorded['timeout'], 17)
         self.assertEqual(recorded['extra_body']['provider']['allow_fallbacks'], False)
+        self.assertEqual(recorded['extra_body']['provider']['only'], ['fixed'])
 
     def test_models_and_prompt_variants_share_files_and_preserve_failures(self):
         calls = []
@@ -94,10 +99,10 @@ class RunnerTests(unittest.TestCase):
                             agent_errors={'a': 'InvalidJSON'})
         with tempfile.TemporaryDirectory() as directory:
             root = self.setup_dataset(directory)
-            args = runner.parser().parse_args(['--dataset', str(root), '--n', '2'])
+            args = runner.parser().parse_args(['--dataset', str(root), '--n', '2', '--allow-incomplete'])
             files = runner.select_files(args)
             output = Path(directory) / 'results'
-            prompt_types = ['simple_estevam', 'complete_estevam', 'complete_v2']
+            prompt_types = ['simple_v2', 'complete_v2']
             coroutine = runner.execute(args, files, ['one', 'two'], prompt_types, output, factory=FakeSupervisor)
             with redirect_stdout(io.StringIO()):
                 try:
@@ -106,21 +111,21 @@ class RunnerTests(unittest.TestCase):
                     summaries = finished.value
                 else:
                     self.fail('Teste simulado nao deve suspender para I/O')
-            self.assertEqual(len(calls), 12)
+            self.assertEqual(len(calls), 8)
             expected = [r['File'] for r in files]
             for model in ('one', 'two'):
                 for kind in prompt_types:
                     self.assertEqual([file for m,p,file in calls if (m,p)==(model,kind)], expected)
-            self.assertEqual(len(summaries), 6)
+            self.assertEqual(len(summaries), 4)
             self.assertTrue(all(r['agent_failures'] == 2 for r in summaries))
             self.assertTrue(all(r['token_usage']['total_tokens'] == 10 for r in summaries))
             self.assertTrue(all(r['total_cost_usd'] is None for r in summaries))
 
     def test_supervisor_does_not_hide_unexpected_agent_failure(self):
         from typing import Any, Dict, List
-        path = BASE / 'src/core/supervisor/supervisor.py'
+        path = BASE / 'src/core/execution/engine.py'
         tree = ast.parse(path.read_text(encoding='utf-8'))
-        node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'CodeSmellSupervisor')
+        node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'DetectionEngine')
         async def gather(*tasks, **kwargs):
             results = []
             for task in tasks:
@@ -132,7 +137,7 @@ class RunnerTests(unittest.TestCase):
         ns = dict(Any=Any, Dict=Dict, List=List, asyncio=SimpleNamespace(gather=gather),
                   logger=SimpleNamespace(info=lambda *a: None, error=lambda *a: None))
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), ns)
-        supervisor = ns['CodeSmellSupervisor'].__new__(ns['CodeSmellSupervisor'])
+        supervisor = ns['DetectionEngine'].__new__(ns['DetectionEngine'])
         supervisor.agent_configs = {'good': {}, 'bad': {}}
         supervisor.agent_errors = {}
         async def call(name, config, code):
@@ -140,7 +145,7 @@ class RunnerTests(unittest.TestCase):
                 raise RuntimeError('simulated')
             return ['hit'], dict(prompt_tokens=1, completion_tokens=1, total_tokens=2)
         supervisor._call_agent = call
-        supervisor._add_metadata = lambda detections, *a: detections
+        supervisor._add_metadata = lambda detections, *a, **kwargs: detections
         task = supervisor._analyze_parallel('pass', 'x.py', 'project')
         try:
             task.send(None)
