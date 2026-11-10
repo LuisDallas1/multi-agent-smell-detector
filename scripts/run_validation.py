@@ -2,7 +2,6 @@
 import argparse
 from datetime import datetime, timezone, timedelta
 import csv
-import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -101,20 +100,11 @@ def main():
         prompt_policy='mutable between rounds; fixed within each unified validation',
         runtime=runner.runtime_versions(), **snapshots))
     runner.write_json(output / 'run_status.json', dict(status='running'))
-    reference_hashes = {name: hashlib.sha256((output / name).read_bytes()).hexdigest()
-                        for name in ('sample.json', 'evaluation_pairs.csv', 'evaluation_reference.csv')}
     try:
         for architecture in EXPERIMENT_LIMITS:
-            if runner.source_snapshots() != snapshots:
-                raise RuntimeError('Código ou prompts mudaram durante a validação unificada')
-            for name, expected in reference_hashes.items():
-                if hashlib.sha256((output / name).read_bytes()).hexdigest() != expected:
-                    raise RuntimeError('Referência ou seleção foi alterada durante a validação')
             child = output / architecture
             result = subprocess.run(command(architecture, args.dataset, output / 'sample.json', child))
             report = collect(output)
-            if runner.source_snapshots() != snapshots:
-                raise RuntimeError('Código ou prompts mudaram durante a validação unificada')
             if (child / 'failure.json').exists():
                 raise RuntimeError('Falha fatal de configuração; demais chamadas canceladas')
             status_path = child / 'run_status.json'

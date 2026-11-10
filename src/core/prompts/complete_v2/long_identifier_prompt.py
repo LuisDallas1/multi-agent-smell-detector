@@ -1,7 +1,6 @@
 """Prompt do especialista alinhado ao protocolo DPy; estrutura original preservada."""
 
 LONG_IDENTIFIER_AGENT_PROMPT = """Você detecta Long Identifier (nomes com > 20 caracteres).
-Referência: Martin (2008).
 
 ## DEFINIÇÃO:
 Identificador (função, classe, variável, constante) com nome > 20 caracteres.

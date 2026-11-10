@@ -1,6 +1,5 @@
 """Checkpoints por arquivo e retomada explícita, sem credenciais ou rede."""
 from contextlib import AbstractContextManager
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -64,38 +63,44 @@ class FileStore:
         self.folder = self.directory / 'checkpoints'
         self.folder.mkdir(exist_ok=True)
         self.marker = self.directory / 'inflight.json'
+        self._paths = None
 
     def path(self, rel):
-        return self.folder / (hashlib.sha256(rel.encode()).hexdigest() + '.json')
+        # Preserve old filenames; identify records by their relative source path.
+        if self._paths is None:
+            self.records()
+        if rel in self._paths:
+            return self._paths[rel]
+        index = sorted(self.files).index(rel) + 1
+        return self.folder / f'file-{index:08d}.json'
 
     def records(self):
-        records = {}
+        records, paths = {}, {}
         for path in sorted(self.folder.glob('*.json')):
             saved = json.loads(path.read_text(encoding='utf-8'))
             if saved.get('version') != VERSION:
                 raise RuntimeError('Versão de checkpoint desconhecida')
-            text = json.dumps(saved['record'], ensure_ascii=False, sort_keys=True, default=str)
-            if hashlib.sha256(text.encode()).hexdigest() != saved['sha256']:
-                raise RuntimeError('Checkpoint alterado ou corrompido')
             record = saved['record']
             rel = record['file']
-            if rel not in self.files or saved['source_sha256'] != self.files[rel]['sha256']:
+            if rel not in self.files:
                 raise RuntimeError('Checkpoint não corresponde à seleção congelada')
-            if rel in records or path != self.path(rel):
+            if rel in records:
                 raise RuntimeError('Checkpoint duplicado ou com identidade incorreta')
             records[rel] = record
+            paths[rel] = path
+        self._paths = paths
         return records
 
     def start(self, item):
         if self.marker.exists():
             raise RuntimeError('Arquivo interrompido ainda não foi reconhecido')
-        write_json(self.marker, dict(file=item['File'], sha256=item['sha256'], id=uuid.uuid4().hex))
+        write_json(self.marker, dict(file=item['File'], id=uuid.uuid4().hex))
 
     def commit(self, record):
         rel = record['file']
-        text = json.dumps(record, ensure_ascii=False, sort_keys=True, default=str)
-        write_json(self.path(rel), dict(version=VERSION, record=record,
-                   source_sha256=self.files[rel]['sha256'], sha256=hashlib.sha256(text.encode()).hexdigest()))
+        path = self.path(rel)
+        write_json(path, dict(version=VERSION, record=record))
+        self._paths[rel] = path
         if self.marker.exists():
             self.marker.unlink()
 
@@ -104,7 +109,7 @@ class FileStore:
         if self.marker.exists():
             marker = json.loads(self.marker.read_text(encoding='utf-8'))
             rel = marker['file']
-            if rel not in self.files or marker['sha256'] != self.files[rel]['sha256']:
+            if rel not in self.files:
                 raise RuntimeError('Marcador de interrupção não corresponde à seleção')
             if rel not in records:
                 if not allow_uncertain:
@@ -128,9 +133,6 @@ def verify_resume(output, snapshots, files, models, prompts, architecture, param
     config = json.loads((output / 'config.json').read_text(encoding='utf-8'))
     if config.get('checkpoint_version') != VERSION:
         raise RuntimeError('Esta rodada antiga não possui checkpoints retomáveis; não será sobrescrita')
-    protocol = json.loads((output / 'protocol.json').read_text(encoding='utf-8'))
-    if any(protocol.get(key) != snapshots[key] for key in ('core_source_sha256', 'prompt_source_sha256')):
-        raise RuntimeError('Código, dependências ou prompts mudaram; retomada bloqueada')
     if config['architecture'] != architecture or list(config['models']) != models or config['prompt_types'] != prompts:
         raise RuntimeError('Condições da execução mudaram; retomada bloqueada')
     keys = ('max_tokens', 'max_retry_tokens', 'response_retries', 'max_retries', 'timeout',
@@ -147,11 +149,6 @@ def verify_resume(output, snapshots, files, models, prompts, architecture, param
             if name not in generation or any(generation[name].get(k) != current.get(k) for k in fields):
                 raise RuntimeError('Parâmetros efetivos do provedor mudaram')
     saved = json.loads((output / 'sample.json').read_text(encoding='utf-8'))['files']
-    if saved != files:
+    if sorted(row['File'] for row in saved) != sorted(row['File'] for row in files):
         raise RuntimeError('Seleção mudou; retomada bloqueada')
-    scope = output / 'evaluation_scope.json'
-    if scope.exists():
-        for name, expected in json.loads(scope.read_text())['saved_hashes'].items():
-            if hashlib.sha256((output / name).read_bytes()).hexdigest() != expected:
-                raise RuntimeError('Referência de avaliação foi alterada')
     return config

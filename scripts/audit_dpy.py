@@ -1,7 +1,6 @@
 """Auditoria offline dos pares e ocorrencias contra a exportacao bruta do DPy."""
 import argparse
 from collections import Counter, defaultdict
-import hashlib
 import json
 from pathlib import Path
 
@@ -17,7 +16,7 @@ def signature(row):
 def audit(dataset, pairs_path, truth_path, raw_dir, selected=None):
     dataset, raw_dir = Path(dataset), Path(raw_dir)
     pairs = [r for r in read_csv(pairs_path) if selected is None or r['File'] in selected]
-    issues, hashes = [], {}
+    issues = []
     files = {r['File'] for r in pairs}
     projects = {rel.split('/')[0] for rel in files}
     raw = defaultdict(list)
@@ -26,7 +25,6 @@ def audit(dataset, pairs_path, truth_path, raw_dir, selected=None):
         if not path.is_file():
             issues.append(dict(type='missing_raw_export', project=project))
             continue
-        hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
         rows = json.loads(path.read_text(encoding='utf-8-sig'))
         if not isinstance(rows, list):
             raise ValueError(f'Exportacao DPy deve ser lista: {path}')
@@ -67,10 +65,8 @@ def audit(dataset, pairs_path, truth_path, raw_dir, selected=None):
                 issues.append(dict(type='source_differs_from_dataset_full', file=rel))
         else:
             source_check.append(dict(file=rel, matches_dataset_full=None))
-    for path in (Path(pairs_path), Path(truth_path)):
-        hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
     return dict(passed=not issues, files=len(files), evaluated_pairs=len(pairs), issues=issues,
-                source_checks=source_check, source_hashes=hashes,
+                source_checks=source_check,
                 limitation='Compara exportacoes existentes; nao reexecuta o DPy nem certifica seus thresholds ou a versao do codigo usada na mineracao.')
 
 

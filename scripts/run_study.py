@@ -4,10 +4,11 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 import run_experiment as runner
 from checkpointing import RunLock,write_json
-from frozen_study import DEFAULT,verify
+from frozen_study import create,validate,verify
 from generation_protocol import EXPERIMENT_LIMITS
 
 
@@ -26,24 +27,38 @@ def command(model,architecture,output,manifest,reference_root,*,dry_run=False):
     return cmd
 
 
+def load_protocol(manifest=None,resume=None):
+    """A rodada e autossuficiente: nao depende de experiment/final."""
+    if manifest is not None:
+        return verify(manifest)
+    if resume is not None:
+        return verify(Path(resume)/'frozen_protocol.json')
+    return create()
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--freeze',type=Path,default=DEFAULT)
+    parser.add_argument('--freeze',type=Path,help='protocolo opcional; padrao: dados atuais ou protocolo salvo na retomada')
     parser.add_argument('--output-dir',type=Path,default=Path.home()/'TCC-results/final_experiment')
     parser.add_argument('--resume',type=Path)
     parser.add_argument('--retry-interrupted',action='store_true')
     parser.add_argument('--dry-run',action='store_true')
     args=parser.parse_args()
     if args.retry_interrupted and not args.resume:parser.error('--retry-interrupted exige --resume')
-    protocol=verify(args.freeze)
     output=(args.resume or args.output_dir).resolve()
+    if args.resume and not output.is_dir():parser.error('Pasta de retomada inexistente')
+    protocol=load_protocol(args.freeze,args.resume)
     if args.dry_run:
         print(json.dumps(dict(freeze_id=protocol['freeze_id'],expected=protocol['expected']),indent=2),flush=True)
-        for architecture in protocol['architectures']:
-            for model in protocol['models']:
-                child=output/model/architecture
-                print(f'{model}/{architecture}: simple_v2 + complete_v2 -> {child}',flush=True)
-                subprocess.run(command(model,architecture,child,args.freeze.parent/'frozen_files.json',None,dry_run=True),check=True)
+        with tempfile.TemporaryDirectory(prefix='tcc-study-plan-') as temporary:
+            manifest=Path(temporary)/'sample.json'
+            write_json(manifest,dict(files=protocol['files']))
+            for architecture in protocol['architectures']:
+                for model in protocol['models']:
+                    child=output/model/architecture
+                    print(f'{model}/{architecture}: simple_v2 + complete_v2 -> {child}',flush=True)
+                    subprocess.run(command(model,architecture,child,manifest,
+                        output if args.resume else None,dry_run=True),check=True)
         return
     if args.resume:
         if not output.is_dir():parser.error('Pasta de retomada inexistente')
@@ -52,24 +67,19 @@ def main():
         if args.resume:
             saved=json.loads((output/'study.json').read_text(encoding='utf-8'))
             if saved['freeze_id']!=protocol['freeze_id']:raise ValueError('Rodada pertence a outro congelamento')
-            for name,expected in saved['reference_sha256'].items():
-                from frozen_study import sha
-                if sha(output/name)!=expected:raise ValueError('Referencia da rodada alterada')
         else:
             from evaluate_results import save_reference
-            from frozen_study import sha
             write_json(output/'sample.json',dict(dataset=str(runner.DEFAULT_DATASET),files=protocol['files'],seed=1))
             save_reference(output,runner.DEFAULT_DATASET,protocol['files'])
             write_json(output/'frozen_protocol.json',protocol)
             write_json(output/'study.json',dict(freeze_id=protocol['freeze_id'],
-                models=protocol['models'],architectures=protocol['architectures'],prompts=protocol['prompts'],
-                reference_sha256={name:sha(output/name) for name in ('sample.json','evaluation_pairs.csv','evaluation_reference.csv')}))
+                models=protocol['models'],architectures=protocol['architectures'],prompts=protocol['prompts']))
         write_json(output/'study_status.json',dict(status='running',all_tasks_valid=False))
         statuses=[]
         try:
             for architecture in protocol['architectures']:
                 for model in protocol['models']:
-                    verify(args.freeze)
+                    validate(protocol)
                     child=output/model/architecture
                     status_path=child/'run_status.json'
                     status=json.loads(status_path.read_text(encoding='utf-8'))['status'] if status_path.exists() else None
@@ -84,7 +94,7 @@ def main():
                     status=json.loads(status_path.read_text(encoding='utf-8'))['status'] if status_path.exists() else 'failed'
                     statuses.append(status)
                     if result.returncode and status!='incomplete':raise RuntimeError(f'Coleta interrompida: {model}/{architecture}')
-            verify(args.freeze)
+            validate(protocol)
             valid=len(statuses)==6 and all(s=='valid' for s in statuses)
             write_json(output/'study_status.json',dict(status='valid' if valid else 'incomplete',all_tasks_valid=valid))
         except BaseException:

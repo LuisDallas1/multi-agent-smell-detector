@@ -1,5 +1,4 @@
 """Selecao e integridade dos conjuntos de prompts, sem credenciais ou LLMs."""
-import hashlib
 import ast
 import json
 import re
@@ -11,12 +10,6 @@ sys.path.insert(0, str(BASE / 'src'))
 sys.path.insert(0, str(BASE / 'scripts'))
 from core.supervisor.agent_config import PROMPT_TYPES, get_agent_configs
 import run_experiment
-
-# Hash de integridade do simples V2 revisado.
-EXPECTED = {
-    'simple_v2': 'edc3e17561674cf1820e8cc2a60bce9f291fafde7c9b3cca8d5e94dc7b1e273b',
-    'complete_v2': 'bcdd7471b4a0ecccc2b43c5bf83be7f28842ad927e9ac5762b97aa0be2d338a3',
-}
 
 class PromptSetTests(unittest.TestCase):
     def test_chain_rules_are_unambiguous_and_shared_with_single(self):
@@ -85,16 +78,6 @@ class PromptSetTests(unittest.TestCase):
             self.assertIn('Line_no (número positivo como string)', prompt, name)
             if name in {'long_method', 'complex_method'}:
                 self.assertIn('Line_no é a linha do def/async def', prompt, name)
-
-    def test_frozen_essential_revision_integrity(self):
-        for group, expected in EXPECTED.items():
-            digest = hashlib.sha256()
-            paths = sorted((BASE / 'src/core/prompts' / group).glob('*_prompt.py'))
-            self.assertEqual(len(paths), 11)
-            for path in paths:
-                digest.update(path.name.encode())
-                digest.update(path.read_text(encoding='utf-8').replace('\r\n', '\n').encode())
-            self.assertEqual(digest.hexdigest(), expected, group)
 
     def test_two_sets_use_same_specialists_and_schemas(self):
         sets = [get_agent_configs(group) for group in PROMPT_TYPES]

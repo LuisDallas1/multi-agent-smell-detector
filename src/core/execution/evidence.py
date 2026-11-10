@@ -3,7 +3,6 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime, timezone
 import base64
-import hashlib
 import json
 import math
 import os
@@ -19,12 +18,8 @@ class EvidenceWriteError(BaseException):
     """Fail-stop: SDKs nao devem transformar falha de disco em retry de API."""
 
 
-def digest(data):
-    return hashlib.sha256(data).hexdigest()
-
-
 class EvidenceStore:
-    """Eventos atomicos, com hash e cadeia por sessao; nunca contem credenciais."""
+    """Eventos atomicos, numerados por sessao; nunca contem credenciais."""
 
     def __init__(self, directory):
         self.root = Path(directory) / 'evidence'
@@ -43,7 +38,7 @@ class EvidenceStore:
             os.replace(temporary, registry)
         except Exception as error:
             raise EvidenceWriteError('Nao foi possivel registrar sessao de evidencias; envio bloqueado') from error
-        self.sequence, self.previous = 0, None
+        self.sequence = 0
         self.failed = False
         self.failure_error = None
         self.secrets = []
@@ -75,12 +70,10 @@ class EvidenceStore:
         active = _ACTIVE.get()
         attempt_id = attempt_id or (active[1] if active and active[0] is self else None)
         event = self.clean(dict(version=VERSION, session=self.session, sequence=self.sequence + 1,
-            previous_sha256=self.previous, timestamp_utc=datetime.now(timezone.utc).isoformat(),
+            timestamp_utc=datetime.now(timezone.utc).isoformat(),
             stage=stage, attempt_id=attempt_id, file_context=dict(self.file_context), payload=payload))
         try:
-            data = json.dumps(event, ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')
-            checksum = digest(data)
-            envelope = json.dumps(dict(event=event, sha256=checksum), ensure_ascii=False,
+            envelope = json.dumps(dict(event=event), ensure_ascii=False,
                                   indent=2, default=str)
             destination = self.folder / f'{self.sequence + 1:08d}.json'
             temporary = destination.with_suffix('.tmp')
@@ -90,11 +83,11 @@ class EvidenceStore:
             if destination.exists():
                 raise OSError('Evento ja existe; nao sobrescrever')
             self._replace(temporary, destination)
-            # The index detects removal of a confirmed tail, not just gaps in the chain.
+            # The index detects removal of a confirmed tail, not just gaps in the sequence.
             head = self.folder / 'head.json'
             head_temp = self.folder / 'head.tmp'
             with head_temp.open('x', encoding='utf-8', newline='\n') as stream:
-                stream.write(json.dumps(dict(sequence=self.sequence + 1, sha256=checksum)))
+                stream.write(json.dumps(dict(sequence=self.sequence + 1)))
                 stream.flush()
             self._replace(head_temp, head)
         except Exception as error:
@@ -102,7 +95,6 @@ class EvidenceStore:
             self.failure_error = error
             raise EvidenceWriteError('Nao foi possivel confirmar evidencias em disco; coleta interrompida') from error
         self.sequence += 1
-        self.previous = checksum
         return destination
 
     @staticmethod
@@ -122,7 +114,7 @@ class EvidenceStore:
                 time.sleep(min(.1, .01 * 2 ** attempt))
 
     def start_file(self, rel, source, code):
-        self.file_context = dict(file=rel, source_sha256=digest(source), execution_id=uuid.uuid4().hex)
+        self.file_context = dict(file=rel, execution_id=uuid.uuid4().hex)
         # Base64 retains BOM/newlines/encoding bytes; code is the exact text passed to the engine.
         self.emit('file_started', dict(source_base64=base64.b64encode(source).decode('ascii'),
                                        source_bytes=len(source), inference_code=code))
@@ -153,7 +145,7 @@ class EvidenceStore:
         # Do not retain an unredacted copy in base64 if a known key was echoed.
         retained = cleaned.encode('utf-8') if redacted else data
         return dict(text=cleaned, base64=base64.b64encode(retained).decode('ascii'),
-                    sha256=digest(retained), bytes=len(retained), credential_redacted=redacted)
+                    bytes=len(retained), credential_redacted=redacted)
 
     @staticmethod
     def public_headers(headers):
@@ -226,27 +218,21 @@ class EvidenceStore:
         for folder in sorted(root.iterdir()) if root.exists() else []:
             if not folder.is_dir():
                 continue
-            previous = None
-            session_checksums = []
+            count_events = 0
             # Ler o índice antes de listar eventos evita confrontar uma lista
             # antiga com um head mais novo durante uma leitura concorrente.
             head = json.loads((folder / 'head.json').read_text(encoding='utf-8')) if (folder / 'head.json').exists() else None
             for sequence, path in enumerate(sorted(folder.glob('[0-9]*.json')), 1):
                 envelope = json.loads(path.read_text(encoding='utf-8'))
                 event = envelope['event']
-                checksum = digest(json.dumps(event, ensure_ascii=False, sort_keys=True,
-                                             default=str).encode('utf-8'))
-                if (checksum != envelope['sha256'] or event['version'] != VERSION
-                        or event['session'] != folder.name or event['sequence'] != sequence
-                        or path.name != f'{sequence:08d}.json' or event['previous_sha256'] != previous):
-                    raise RuntimeError('Journal de evidencias alterado, incompleto ou corrompido')
-                session_checksums.append(checksum)
-                previous = checksum
+                if (event['version'] != VERSION or event['session'] != folder.name
+                        or event['sequence'] != sequence or path.name != f'{sequence:08d}.json'):
+                    raise RuntimeError('Journal de evidencias incompleto ou com estrutura invalida')
+                count_events += 1
                 yield event
             if head is not None:
                 count = head['sequence']
-                if (not isinstance(count, int) or count < 1 or count > len(session_checksums)
-                        or session_checksums[count - 1] != head['sha256']):
+                if not isinstance(count, int) or count < 1 or count > count_events:
                     raise RuntimeError('Cauda confirmada do journal ausente ou corrompida')
 
     @classmethod
@@ -294,8 +280,7 @@ class EvidenceStore:
                 item['interrupted'] = True
         for item in calls.values():
             item['file_committed'] = item['file_context'].get('execution_id') in committed
-        temporary = [dict(path=str(p.relative_to(Path(directory))), bytes=p.stat().st_size,
-                          sha256=digest(p.read_bytes())) for p in (Path(directory)/'evidence').rglob('*.tmp')]
+        temporary = [dict(path=str(p.relative_to(Path(directory))), bytes=p.stat().st_size) for p in (Path(directory)/'evidence').rglob('*.tmp')]
         return dict(version=VERSION, event_count=event_count, attempts=list(calls.values()),
             uncommitted_temporary_files=temporary,
             known_cost_usd=sum(c['cost_usd'] or 0 for c in calls.values()),

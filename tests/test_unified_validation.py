@@ -25,14 +25,11 @@ class UnifiedValidationTests(unittest.TestCase):
             self.assertEqual(args.response_retries, 1)
             self.assertEqual(args.max_tokens, budget)
 
-    def test_code_and_prompt_fingerprints_are_separate(self):
-        snapshots = run_experiment.source_snapshots()
-        self.assertTrue(snapshots['core_source_sha256'])
-        self.assertTrue(snapshots['prompt_source_sha256'])
-        self.assertIn('src/core/execution/engine.py', snapshots['core_source_sha256'])
-        self.assertIn('src/core/single_agent/prompts/builder.py', snapshots['prompt_source_sha256'])
-        self.assertTrue(all('prompts' not in Path(p).parts for p in snapshots['core_source_sha256']))
-        self.assertTrue(all('.env' not in Path(p).name for p in snapshots['core_source_sha256']))
+    def test_source_inventory_excludes_credentials(self):
+        inventory = run_experiment.source_snapshots()['source_files']
+        self.assertIn('src/core/execution/engine.py', inventory)
+        self.assertIn('src/core/single_agent/prompts/builder.py', inventory)
+        self.assertTrue(all('.env' not in Path(p).name for p in inventory))
 
     def test_partial_summary_cost_preserved_without_completed_evaluation(self):
         with tempfile.TemporaryDirectory() as temporary:

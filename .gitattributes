@@ -20,3 +20,4 @@ Dockerfile text eol=lf
 /dataset_full/** -text -eol
 /results/** -text -eol
 /archives/*.zip -text -eol
+/final_experiment/** -text -eol

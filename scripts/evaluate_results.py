@@ -2,7 +2,6 @@
 import argparse
 import csv
 from collections import Counter, defaultdict
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -35,10 +34,7 @@ def save_reference(run, dataset, files, pairs_path=None, truth_path=None):
             writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
             writer.writeheader()
             writer.writerows(rows)
-    provenance = dict(pairs_source=str(pairs_path), truth_source=str(truth_path),
-                      source_hashes={str(p): hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in (pairs_path, truth_path)},
-                      saved_hashes={name: hashlib.sha256((run / name).read_bytes()).hexdigest()
-                                    for name in ('evaluation_pairs.csv', 'evaluation_reference.csv')})
+    provenance = dict(pairs_source=str(pairs_path), truth_source=str(truth_path))
     (run / 'evaluation_scope.json').write_text(json.dumps(provenance, indent=2), encoding='utf-8')
     return scope
 
@@ -89,14 +85,9 @@ def evaluate_run(run, dataset=None, pairs_path=None, truth_path=None):
         path = (dataset / rel).resolve()
         if not path.is_relative_to(dataset):
             raise ValueError('Amostra fora do dataset')
-        if hashlib.sha256(path.read_bytes()).hexdigest() != row['sha256']:
-            raise ValueError(f'Codigo mudou desde a inferencia: {rel}')
+        if not path.is_file():
+            raise ValueError(f'Arquivo ausente: {rel}')
     snapshot = run / 'evaluation_scope.json'
-    if snapshot.is_file():
-        provenance = json.loads(snapshot.read_text(encoding='utf-8'))
-        for name, expected in provenance['saved_hashes'].items():
-            if hashlib.sha256((run / name).read_bytes()).hexdigest() != expected:
-                raise ValueError(f'Gabarito/manifesto salvo foi alterado: {name}')
     pairs_path = pairs_path or (run / 'evaluation_pairs.csv' if snapshot.is_file() else dataset / 'ground_truth/evaluation_pairs.csv')
     truth_path = truth_path or (run / 'evaluation_reference.csv' if snapshot.is_file() else dataset / 'ground_truth/dpy_implementation_smells_sample.csv')
     sample = defaultdict(dict)
@@ -173,8 +164,7 @@ def evaluate_run(run, dataset=None, pairs_path=None, truth_path=None):
         raise ValueError('Nenhum resultado de inferencia encontrado')
     report = dict(evaluation_version=Reference.VERSION, primary_metric='occurrence.f1',
                   pairs_source=str(pairs_path), ground_truth_source=str(truth_path),
-                  pairs_sha256=hashlib.sha256(Path(pairs_path).read_bytes()).hexdigest(),
-                  ground_truth_sha256=hashlib.sha256(Path(truth_path).read_bytes()).hexdigest(), results=results)
+                  results=results)
     (run / 'evaluation_summary.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     return report
 

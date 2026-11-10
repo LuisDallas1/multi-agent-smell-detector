@@ -1,6 +1,5 @@
 import ast
 from contextlib import redirect_stdout
-import hashlib
 import importlib.util
 import io
 import json
@@ -36,7 +35,7 @@ class RunnerTests(unittest.TestCase):
             args.all_files = True
             self.assertEqual(len(runner.select_files(args)), 9)
 
-    def test_frozen_selection_detects_changes(self):
+    def test_selection_accepts_legacy_hashes_without_content_checks(self):
         with tempfile.TemporaryDirectory() as directory:
             root = self.setup_dataset(directory)
             args = runner.parser().parse_args(['--dataset', str(root), '--n', '2'])
@@ -46,8 +45,11 @@ class RunnerTests(unittest.TestCase):
             args.files_from = manifest
             self.assertEqual(runner.select_files(args), selected)
             (root / selected[0]['File']).write_text('changed = True', encoding='utf-8')
-            with self.assertRaisesRegex(ValueError, 'mudou'):
-                runner.select_files(args)
+            legacy = dict(files=[dict(row, sha256='obsolete') for row in selected])
+            runner.write_json(manifest, legacy)
+            current = runner.select_files(args)
+            self.assertEqual([r['File'] for r in current], [r['File'] for r in selected])
+            self.assertTrue(all('sha256' not in r for r in current))
 
     def test_manifest_cannot_escape_dataset(self):
         with tempfile.TemporaryDirectory() as directory:

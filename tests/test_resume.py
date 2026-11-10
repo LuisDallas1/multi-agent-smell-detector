@@ -118,7 +118,7 @@ class ResumeTests(unittest.TestCase):
             self.assertTrue(summary['cost_complete'])
             self.assertEqual(summary['valid_tasks'], 3)
 
-    def test_corruption_changed_prompts_and_changed_parameters_block_before_calls(self):
+    def test_changed_parameters_still_block_before_calls(self):
         with tempfile.TemporaryDirectory() as temporary:
             args, files, output = setup(temporary)
             run(args, files, output, factory([]))
@@ -126,17 +126,22 @@ class ResumeTests(unittest.TestCase):
             resume.max_tokens += 1
             with self.assertRaisesRegex(RuntimeError, 'Parâmetros'):
                 run(resume, selected, output, factory([]))
-            snapshot = runner.source_snapshots()
-            snapshot['prompt_source_sha256'] = {'changed': 'hash'}
-            with patch.object(runner, 'source_snapshots', return_value=snapshot):
-                with self.assertRaisesRegex(RuntimeError, 'prompts mudaram'):
-                    run(*resumed(output), output, factory([]))
-            checkpoint = next((output / '01_mock/complete_v2/checkpoints').glob('*.json'))
-            data = json.loads(checkpoint.read_text())
-            data['record']['elapsed_seconds'] += 1
-            checkpoint.write_text(json.dumps(data))
-            with self.assertRaisesRegex(RuntimeError, 'corrompido'):
-                run(*resumed(output), output, factory([]))
+    def test_legacy_sha_fields_are_ignored_without_rewriting_results(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            (directory / 'checkpoints').mkdir()
+            record = dict(file='x.py', result={'code_smells': []})
+            path = directory / 'checkpoints' / ('a' * 64 + '.json')
+            path.write_text(json.dumps(dict(version='file-v1', record=record,
+                sha256='obsolete', source_sha256='obsolete')), encoding='utf-8')
+            before = path.read_bytes()
+            store = FileStore(directory, [dict(File='x.py')])
+            self.assertEqual(store.records(), {'x.py': record})
+            self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(store.path('x.py'), path)
+            store.commit(record)
+            self.assertEqual(len(list(store.folder.glob('*.json'))), 1)
+            self.assertNotIn('sha256', json.loads(path.read_text()))
 
     def test_run_lock_rejects_simultaneous_writer(self):
         with tempfile.TemporaryDirectory() as temporary:

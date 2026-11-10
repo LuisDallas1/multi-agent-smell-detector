@@ -1,7 +1,6 @@
 """Prompt do especialista alinhado ao protocolo DPy; estrutura original preservada."""
 
 COMPLEX_CONDITIONAL_AGENT_PROMPT = """Você detecta Complex Conditional (condicionais com > 2 operadores lógicos and/or).
-Referência: Fowler (2018).
 
 ## DEFINIÇÃO:
 Condicional (if, elif, while) com mais de 2 operadores lógicos (and, or).

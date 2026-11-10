@@ -1,7 +1,6 @@
 """Prompt do especialista alinhado ao protocolo DPy; estrutura original preservada."""
 
 COMPLEX_METHOD_AGENT_PROMPT = """Você detecta Complex Method (Complexidade Ciclomática > 7).
-Referência: McCabe (1976).
 
 ## DEFINIÇÃO:
 Função excessivamente complexa em fluxo de controle. CC = 1 + pontos de decisão.

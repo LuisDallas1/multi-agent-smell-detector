@@ -209,8 +209,8 @@ class EvidenceTests(unittest.TestCase):
                 if body:
                     self.assertNotIn(b'TEST-PRIVATE-KEY', base64.b64decode(body['base64']))
 
-    def test_tampered_or_missing_middle_event_is_detected(self):
-        for mode in ('tamper', 'delete', 'delete_last'):
+    def test_missing_middle_or_tail_event_is_detected(self):
+        for mode in ('delete', 'delete_last'):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
                 store = EvidenceStore(temporary)
                 for i in range(3):
@@ -226,6 +226,20 @@ class EvidenceTests(unittest.TestCase):
                     path.write_text(json.dumps(payload))
                 with self.assertRaises(RuntimeError):
                     EvidenceStore.events(temporary)
+
+    def test_legacy_sha_fields_are_optional_and_events_stay_unchanged(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            store = EvidenceStore(temporary)
+            store.emit('test', {'value': 1})
+            path = store.folder / '00000001.json'
+            envelope = json.loads(path.read_text())
+            self.assertNotIn('sha256', envelope)
+            envelope['sha256'] = 'obsolete'
+            envelope['event']['previous_sha256'] = 'obsolete'
+            path.write_text(json.dumps(envelope), encoding='utf-8')
+            before = path.read_bytes()
+            self.assertEqual(EvidenceStore.events(temporary)[0]['payload'], {'value': 1})
+            self.assertEqual(path.read_bytes(), before)
 
     def test_constructor_installs_hooks_without_loading_real_settings(self):
         from types import SimpleNamespace

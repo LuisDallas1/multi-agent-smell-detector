@@ -1,7 +1,6 @@
 """Prompt do especialista alinhado ao protocolo DPy; estrutura original preservada."""
 
 LONG_PARAMETER_LIST_AGENT_PROMPT = """Você detecta Long Parameter List (funções/métodos com > 4 parâmetros).
-Referência: Fowler (1999).
 
 ## DEFINIÇÃO:
 Função ou método com número excessivo de parâmetros (> 4).

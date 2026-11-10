@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Pacotes completos distribuidos nos anexos da Release; preservar copias locais.
+/dataset_full/
+/final_experiment/
+/release-assets/
+/.test-tmp/

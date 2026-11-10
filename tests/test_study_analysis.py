@@ -1,7 +1,6 @@
 """Metricas conhecidas, pareamento, layout novo e bloqueios do congelamento."""
 import asyncio
 import csv
-import hashlib
 import json
 from pathlib import Path
 import sys
@@ -29,7 +28,7 @@ def fixture(root):
     data=root/'data';data.mkdir()
     (data/'a.py').write_text('def f():\n    return 7\n',encoding='utf-8')
     (data/'b.py').write_text('def g():\n    pass\n',encoding='utf-8')
-    files=[dict(File=f,sha256=hashlib.sha256((data/f).read_bytes()).hexdigest()) for f in ('a.py','b.py')]
+    files=[dict(File=f) for f in ('a.py','b.py')]
     study=root/'study';run=study/'mock/single'
     write(run/'config.json',dict(architecture='single',parameters={},models={'mock':'mock'}))
     write(run/'sample.json',dict(dataset=str(data),files=files))
@@ -96,11 +95,33 @@ class StudyAnalysisTests(unittest.TestCase):
             self.assertTrue((study/'analysis/attempts.csv').is_file())
             self.assertEqual(report['unavailable']['llm_run_variance'],'One generation per condition does not estimate repeated-call variance.')
 
-    def test_analysis_rejects_changed_source(self):
+    def test_analysis_metrics_match_with_and_without_legacy_sha_fields(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            study=fixture(Path(temporary))
+            run=study/'mock/single'
+            first=analyze(study,output=study/'plain-analysis',iterations=16)
+            selection=json.loads((run/'sample.json').read_text())
+            for row in selection['files']:row['sha256']='obsolete'
+            write(run/'sample.json',selection)
+            write(run/'evaluation_scope.json',dict(saved_hashes={'evaluation_pairs.csv':'obsolete'}))
+            before={p:p.read_bytes() for p in run.rglob('*') if p.is_file()}
+            second=analyze(study,output=study/'legacy-analysis',iterations=16)
+            self.assertEqual(first,second)
+            self.assertTrue(all(p.read_bytes()==value for p,value in before.items()))
+
+    def test_local_dataset_override_preserves_historical_manifests(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);study=fixture(root)
-            (root/'data/a.py').write_text('changed',encoding='utf-8')
-            with self.assertRaisesRegex(ValueError,'Arquivo mudou'):analyze(study,iterations=16)
+            selection=study/'mock/single/sample.json'
+            payload=json.loads(selection.read_text())
+            payload['dataset']='Z:/historical-computer/missing-dataset'
+            write(selection,payload)
+            before=selection.read_bytes()
+            report=analyze(study,output=root/'analysis',iterations=16,dataset=root/'data')
+            self.assertEqual(report['conditions'],2)
+            simple=next(c for c in report['conditions_summary'] if c['prompt']=='simple_v2')
+            self.assertEqual(simple['primary.f1'],1)
+            self.assertEqual(selection.read_bytes(),before)
 
     def test_flat_layout_runs_and_resumes_without_duplicate_model_directory(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -122,16 +143,22 @@ class StudyAnalysisTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             path=Path(temporary)/'freeze.json';write(path,dict(freeze_id='bad',version='changed'))
             with patch.object(frozen_study.runner,'runtime_versions',side_effect=AssertionError('must not load')):
-                with self.assertRaisesRegex(ValueError,'Manifesto'):frozen_study.verify(path)
+                with self.assertRaisesRegex(ValueError,'Formato'):frozen_study.verify(path)
 
-    def test_freeze_rejects_changed_code_before_runtime_or_data_loading(self):
+    def test_freeze_accepts_legacy_sha_fields_without_rewriting_manifest(self):
         with tempfile.TemporaryDirectory() as temporary:
-            path=Path(temporary)/'freeze.json'
-            payload=dict(core_source_sha256={'script':'old'},prompt_source_sha256={})
-            payload['freeze_id']=hashlib.sha256(json.dumps(payload,sort_keys=True,default=str).encode()).hexdigest()
-            write(path,payload)
-            with patch.object(frozen_study.runner,'source_snapshots',return_value=dict(core_source_sha256={'script':'new'},prompt_source_sha256={})), patch.object(frozen_study.runner,'runtime_versions',side_effect=AssertionError('must not load')):
-                with self.assertRaisesRegex(ValueError,'Codigo'):frozen_study.verify(path)
+            root=Path(temporary);data=root/'dataset';data.mkdir()
+            (data/'x.py').write_text('pass')
+            path=root/'freeze.json'
+            files=[dict(File='x.py',sha256='obsolete')]
+            write(path,dict(version=frozen_study.VERSION,freeze_id='historical-id',
+                runtime={'python':'test'},files=files,core_source_sha256={'old':'obsolete'}))
+            write(root/'frozen_files.json',dict(files=[dict(File='x.py')]))
+            before=path.read_bytes()
+            with patch.object(frozen_study.runner,'DEFAULT_DATASET',data), patch.object(
+                    frozen_study.runner,'runtime_versions',return_value={'python':'test'}):
+                self.assertEqual(frozen_study.verify(path)['freeze_id'],'historical-id')
+            self.assertEqual(path.read_bytes(),before)
 
 
 if __name__=='__main__':unittest.main()

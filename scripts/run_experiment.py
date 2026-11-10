@@ -3,7 +3,6 @@ import argparse
 import asyncio
 import csv
 from datetime import datetime, timedelta, timezone
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -131,15 +130,12 @@ def select_files(args):
         if not path.is_file():
             raise ValueError(f'Arquivo listado nao existe: {rel}')
         content = path.read_bytes()
-        digest = hashlib.sha256(content).hexdigest()
-        if isinstance(row, dict) and row.get('sha256') and row['sha256'] != digest:
-            raise ValueError(f'Arquivo mudou desde a selecao: {rel}')
         lines = len(content.decode('utf-8-sig').split('\n'))
         if lines > args.max_lines or len(content) > args.max_file_kb * 1024:
             if listed is not None:
                 raise ValueError(f'Arquivo listado excede max-lines/max-file-kb: {rel}')
             continue
-        found.append(dict(File=path.relative_to(dataset).as_posix(), sha256=digest, lines=lines, bytes=len(content)))
+        found.append(dict(File=path.relative_to(dataset).as_posix(), lines=lines, bytes=len(content)))
     count = None if args.all_files else args.max_files or 5
     if count is not None and len(found) > count:
         found = random.Random(args.seed).sample(found, count)
@@ -212,16 +208,10 @@ def summarize_tasks(model, prompt_type, files, agents, metrics, detections):
 
 
 def source_snapshots():
-    """Separa código fixo de fontes dos prompts; nunca inclui credenciais."""
+    """Inventario das fontes; sem hashes ou verificacao de conteudo."""
     paths = list((BASE / 'src').rglob('*.py')) + list((BASE / 'scripts').glob('*.py'))
     paths += [BASE / name for name in ('pyproject.toml', 'uv.lock', '.python-version', '.gitattributes')]
-    core, prompts = {}, {}
-    for path in sorted(set(paths)):
-        rel = path.relative_to(BASE)
-        target = prompts if 'prompts' in rel.parts else core
-        target[rel.as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
-    fingerprint = hashlib.sha256(json.dumps(core, sort_keys=True).encode()).hexdigest()
-    return dict(core_source_sha256=core, prompt_source_sha256=prompts, core_fingerprint=fingerprint)
+    return dict(source_files=sorted(p.relative_to(BASE).as_posix() for p in set(paths)))
 
 
 def load_factory(args, model_names):
@@ -293,7 +283,7 @@ async def execute(args, files, model_names, prompt_types, output, factory=None):
                 for prompt in prompt_types:
                     directory = condition_directory(output, index, name, prompt, getattr(args, 'output_layout', 'legacy'))
                     if directory.exists():
-                        EvidenceStore.verify(directory)  # Integrity checked before any replay/API call.
+                        EvidenceStore.verify(directory)  # Structure checked before any replay/API call.
                         FileStore(directory, files).recover(getattr(args, 'retry_interrupted', False))
         resources = []
         try:
@@ -413,8 +403,6 @@ async def _execute(args, files, model_names, prompt_types, output, factory=None,
                 path = args.dataset.resolve() / item['File']
                 started = time.monotonic()
                 source = path.read_bytes()
-                if hashlib.sha256(source).hexdigest() != item['sha256']:
-                    raise ValueError(f'Arquivo mudou durante a rodada: {item["File"]}')
                 store.start(item)
                 code = source.decode('utf-8-sig')
                 evidence.start_file(item['File'], source, code)

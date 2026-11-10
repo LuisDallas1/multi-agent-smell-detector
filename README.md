@@ -1,8 +1,51 @@
 # Detector de implementation smells — TCC 2.0
 
-Comparação entre supervisor com 11 especialistas e agente único para detectar 11 implementation smells em Python, usando o DPy como referência operacional. As duas arquiteturas usam LangChain, respostas validadas com Pydantic e o mesmo motor de execução, persistência e avaliação. A coleta definitiva ainda não começou.
+Comparação entre supervisor com 11 especialistas e agente único para detectar 11 implementation smells em Python, usando o DPy como referência operacional. As duas arquiteturas usam LangChain, respostas validadas com Pydantic e o mesmo motor de execução, persistência e avaliação. A coleta definitiva foi encerrada em 10/11/2026: as 12 condições processaram os mesmos 182 arquivos (2.184 análises de arquivo). Houve 95 falhas finais de tarefas, preservadas na avaliação; por isso o status técnico é `incomplete`, com `analysis_status: complete`.
 
 Este README reúne a documentação ativa.
+
+## Resultados definitivos
+
+- Relatório incluído no pacote de resultados: `final_experiment/analysis/report.html`.
+- Métricas e custos: `final_experiment/analysis/conditions.csv`; desempenho por categoria: `final_experiment/analysis/by_smell.csv`.
+- Protocolo executado incluído no pacote: `final_experiment/frozen_protocol.json`.
+- A auditoria final verificou os 2.184 checkpoints e os journals das 12 condições. O custo conhecido foi US$ 19,4133473586; oito tentativas têm custo desconhecido, logo a cobrança total não é determinada.
+- As respostas brutas, prompts enviados, schemas, checkpoints e journals foram preservados integralmente.
+- Os resultados foram movidos da pasta externa `TCC-results/final_experiment` para `final_experiment/` neste projeto. Caminhos absolutos nos manifestos registram a localização original e não foram reescritos.
+- Há alterações locais posteriores ao congelamento em cinco prompts completos. Esta limpeza não as modificou; não se deve apresentar automaticamente o código atual como idêntico ao executado. Os prompts efetivamente enviados estão nos artefatos de cada condição.
+
+
+## Downloads dos dados e resultados
+
+O Git versiona o código, testes, dependências e o dataset selecionado (`dataset/`, com os 182 arquivos e o gabarito). As pastas completas `dataset_full/` e `final_experiment/` são distribuídas em dois anexos da [Release v2.0-tcc](https://github.com/LuisDallas1/multi-agent-smell-detector/releases/tag/v2.0-tcc):
+
+| Anexo | Conteúdo |
+| --- | --- |
+| [dataset_full.zip](https://github.com/LuisDallas1/multi-agent-smell-detector/releases/download/v2.0-tcc/dataset_full.zip) | Dataset completo, DPy e configuração; sem os diretórios `.git` dos projetos internos |
+| [final_experiment.zip](https://github.com/LuisDallas1/multi-agent-smell-detector/releases/download/v2.0-tcc/final_experiment.zip) | Coleta completa das 12 condições, protocolos, referências, prompts, respostas, checkpoints, journals e análise consolidada |
+
+Os links passam a funcionar após a publicação da Release. Baixe os dois anexos e extraia-os **na raiz deste repositório**. Cada ZIP já contém a pasta de mesmo nome; não crie uma pasta adicional ao extrair. A estrutura esperada é:
+
+```text
+multi-agent-smell-detector/
+  src/
+  scripts/
+  dataset/
+  dataset_full/          # extraido de dataset_full.zip
+  final_experiment/      # extraido de final_experiment.zip
+```
+
+No PowerShell, com os ZIPs baixados em Downloads e o terminal na raiz do projeto:
+
+```powershell
+Expand-Archive -LiteralPath (Join-Path $HOME 'Downloads/dataset_full.zip') -DestinationPath .
+Expand-Archive -LiteralPath (Join-Path $HOME 'Downloads/final_experiment.zip') -DestinationPath .
+python -B scripts/analyze_study.py --study final_experiment --dataset dataset
+```
+
+Use uma pasta de projeto sem uma coleta prévia para evitar misturar arquivos. Os manifestos históricos mantêm seus caminhos originais. A opção `--dataset dataset` aponta a análise para os arquivos locais, sem editar esses manifestos nem as previsões. A análise regrava seus relatórios derivados; use `--output outra-pasta` se quiser preservar também os relatórios originais.
+
+Para preparar os anexos e publicar uma nova versão, consulte [RELEASING.md](RELEASING.md).
 
 ## Experimento
 
@@ -93,9 +136,9 @@ A investigação do DPy não dá acesso à implementação interna nem prova equ
 
 ## Execução
 
-Use o ambiente com as dependências de `pyproject.toml`/`uv.lock` e o runtime do manifesto. Alterações em fontes, dependências, prompts, arquivos e runtime invalidam a verificação. A instalação de dependências é separada; o dry-run não instala nem atualiza pacotes.
+Use o ambiente com as dependências de `pyproject.toml`/`uv.lock` e o runtime do manifesto. A conferência verifica seleção, existência dos arquivos e runtime; não calcula hashes de conteúdo. A instalação de dependências é separada; o dry-run não instala nem atualiza pacotes.
 
-O manifesto ativo é `experiment/final/frozen_protocol.json`, com seleção em `frozen_files.json`. Conferência sem credenciais, rede LLM ou custo:
+O plano é gerado diretamente de `dataset/ground_truth/evaluation_pairs.csv` e do gabarito atual. Não é necessário preparar nem manter uma pasta externa de protocolo. Cada nova coleta salva seu próprio `frozen_protocol.json`, `sample.json` e referência na pasta de saída; a retomada usa esses arquivos da própria rodada. Conferência sem credenciais, rede LLM ou custo:
 
 ```powershell
 python -B scripts/frozen_study.py
@@ -116,14 +159,14 @@ Para executar uma arquitetura/LLM de cada vez sem alterar a seleção, use o exe
 
 ```powershell
 python -B scripts/frozen_study.py
-python -B scripts/run_experiment.py --architecture multiagent --model gpt-6-luna --prompt-type paired --generation-profile experiment --response-format json_mode --json-normalization markdown_fence --output-layout flat --files-from experiment/final/frozen_files.json --all-files --max-tokens 8192 --max-retry-tokens 32768 --response-retries 1 --max-retries 0 --concurrency 2 --timeout 120 --output-dir "$saida/gpt-6-luna/multiagent"
+python -B scripts/run_experiment.py --architecture multiagent --model gpt-6-luna --prompt-type paired --generation-profile experiment --response-format json_mode --json-normalization markdown_fence --output-layout flat --files-from dataset/ground_truth/evaluation_pairs.csv --all-files --max-tokens 8192 --max-retry-tokens 32768 --response-retries 1 --max-retries 0 --concurrency 2 --timeout 120 --output-dir "$saida/gpt-6-luna/multiagent"
 ```
 
-No agente único, trocar arquitetura para `single`, `--max-tokens` para 32768 e a pasta correspondente. Conservar os demais parâmetros e usar os IDs ativos. Essa forma manual não executa a verificação do congelamento automaticamente a cada etapa como `run_study.py`; confira o manifesto antes de cada execução. Não misture execuções manuais com o orquestrador sem conferir seu estado de retomada.
+No agente único, trocar arquitetura para `single`, `--max-tokens` para 32768 e a pasta correspondente. Conservar os demais parâmetros e usar os IDs ativos. O orquestrador `run_study.py` gera o plano ao iniciar e verifica sua seleção e runtime durante a coleta. Não misture execuções manuais com o orquestrador sem conferir seu estado de retomada.
 
 ## Falhas, persistência e retomada
 
-Cada tentativa preserva mensagens/prompt, pedido e resposta HTTP, fragmentos recebidos, metadados, JSON antes/depois de validação, detecções, decisões de extração, erros, tokens, custo e tempos disponíveis. O journal `evidence/` usa eventos numerados, hashes encadeados, índice, temporário, flush e troca atômica. Checkpoints por arquivo permitem reconstruir agregados. Bloqueios transitórios específicos do Windows têm repetição de gravação limitada, sem repetir a API. Erro permanente de escrita interrompe novas chamadas.
+Cada tentativa preserva mensagens/prompt, pedido e resposta HTTP, fragmentos recebidos, metadados, JSON antes/depois de validação, detecções, decisões de extração, erros, tokens, custo e tempos disponíveis. O journal `evidence/` usa eventos numerados, índice, temporário, flush e troca atômica. Checkpoints por arquivo permitem reconstruir agregados. Bloqueios transitórios específicos do Windows têm repetição de gravação limitada, sem repetir a API. Erro permanente de escrita interrompe novas chamadas.
 
 Não é possível garantir a preservação de uma resposta que o serviço não entregou nem de dados ainda não confirmados antes de uma falha física. Chamadas em voo podem ter custo desconhecido. Credenciais e cabeçalhos de autenticação são excluídos; a chave conhecida é redigida. Custo ausente é desconhecido, não zero. `usage.cost` inclui retries quando informado. Não somar custo do journal ao dos checkpoints: há sobreposição. Não inventar rateio por smell no agente único.
 
@@ -133,14 +176,14 @@ Retomada da coleta:
 python -B scripts/run_study.py --resume "$saida"
 ```
 
-Código, runtime, prompts e insumos precisam corresponder à rodada. Arquivos confirmados não são repetidos, inclusive os com falha final. Para repetir arquivo interrompido, é necessário acrescentar explicitamente `--retry-interrupted`; isso pode repetir chamadas já cobradas. Não há retomada automática somente dos especialistas restantes dentro desse arquivo. Não use repetição ilimitada para obter resposta melhor. Autenticação, falta de crédito e permissões bloqueiam a continuidade; trabalho recebido permanece salvo.
+A retomada usa a seleção, os parâmetros e o protocolo salvos na própria rodada; runtime e prompts enviados continuam sendo conferidos. Arquivos confirmados não são repetidos, inclusive os com falha final. Para repetir arquivo interrompido, é necessário acrescentar explicitamente `--retry-interrupted`; isso pode repetir chamadas já cobradas. Não há retomada automática somente dos especialistas restantes dentro desse arquivo. Não use repetição ilimitada para obter resposta melhor. Autenticação, falta de crédito e permissões bloqueiam a continuidade; trabalho recebido permanece salvo.
 
 Cópias na mesma unidade protegem contra exclusão acidental, mas não contra perda física do dispositivo. Guardar o pacote congelado e resultados também em outro local é uma ação separada.
 
 ## Organização e análise dos resultados
 
 ```text
-TCC-results/final_experiment/
+final_experiment/
   sample.json, evaluation_pairs.csv, evaluation_reference.csv
   frozen_protocol.json, study.json, study_status.json
   gpt-6-luna/
@@ -167,7 +210,7 @@ Bootstrap pareado por arquivo, 10.000 reamostras, seed 20261106 e IC95% descreve
 | --- | --- |
 | `run_study.py` | Orquestrar coleta congelada, dry-run e retomada |
 | `run_experiment.py` | Executor nativo por arquitetura, modelo e prompts; limites de arquivos e dry-run |
-| `frozen_study.py` | Criar e verificar manifestos por hashes, sem sobrescrever congelamento existente |
+| `frozen_study.py` | Mostrar o plano atual; opcionalmente salvar ou verificar um protocolo informado por `--manifest` |
 | `generation_protocol.py` | Preflight e parâmetros padronizados |
 | `checkpointing.py` | Persistência e retomada por arquivo |
 | `evaluate_results.py`, `experiment_evaluation.py` | Avaliação compartilhada por ocorrência e referência |
@@ -176,22 +219,17 @@ Bootstrap pareado por arquivo, 10.000 reamostras, seed 20261106 e IC95% descreve
 | `audit_dpy.py` | Conferir gabarito selecionado contra exportações brutas e fontes |
 | `check_provider.py` | Diagnóstico pago de um arquivo/especialista e endpoint, separado do experimento |
 | `run_validation.py` | Matriz exploratória reduzida; sem congelamento final |
+| `package_release.py` | Empacotar e verificar os dois anexos da Release, sem alterar os dados de origem |
 | `sample_dataset.py` | Reproduzir amostragem; não executar sobre o dataset congelado |
 
 Os testes offline estão em `tests/` e cobrem preservação, interrupção, retomada, avaliação e pareamento. Execute com `python -B -m unittest discover -s tests`. A API em `src/api` é um componente opcional; o ponto de entrada da coleta é `scripts/run_study.py`.
 
-## Histórico experimental consolidado e congelamento
+## Proveniência e versão executada
 
-O projeto mantém a estrutura de supervisor/especialistas e LangChain/Pydantic herdada do trabalho anterior. As mudanças centrais são novo dataset minerado/amostrado por pares, comparação com agente único, avaliação por ocorrência, contratos de saída e preservação/controle de falhas e custos. Não se afirma reprodução exata das métricas do trabalho anterior, pois dados e método de avaliação mudaram.
+O experimento reutiliza a estrutura supervisor/especialistas e LangChain/Pydantic do trabalho predecessor, com novo conjunto minerado/amostrado, agente único, avaliação por ocorrência e registro de falhas e custos. Os resultados não constituem reprodução direta das métricas históricas, pois dados, modelos e avaliação diferem.
 
-Durante a exploração foram comparados modelos/provedores e formatos de resposta. Qwen e Gemini não integram a seleção ativa. O DeepSeek ativo é o ID original, não o alias 1017. Os resultados antigos pertencem às respectivas versões e não serão reunidos como se fossem uma única coleta final.
+A preparação incluiu ensaios exploratórios e auditoria das regras operacionais do DPy; Qwen e Gemini não integram as 12 condições definitivas. Esses ensaios permanecem no arquivo externo e não são misturados aos resultados finais.
 
-Foram retiradas exigências de medidas numéricas exatas e filtros baseados nessas medidas; o contrato atual registra identidade/localização e deixa erros de detecção aparecerem como FP/FN. Raciocínio longo continuou causando truncamentos no DeepSeek. Uma falha de persistência com leitura simultânea revelou um problema de bloqueio/troca de índice no Windows; a escrita ganhou recuperação transitória limitada e o leitor passou a validar um snapshot consistente. A falha original não permite afirmar defeito físico do disco nem identificar seu errno original com certeza.
+Os artefatos históricos preservam o registro da versão executada. Mudanças posteriores em fontes, prompts ou documentação não devem sobrescrever nem alterar os registros originais da coleta. Nenhuma nova chamada LLM foi realizada durante esta limpeza.
 
-Na validação geral de três arquivos e 12 condições anterior às últimas correções, nove condições foram integralmente válidas: duas DeepSeek/multiagente tiveram falhas finais e uma Haiku/multiagente foi interrompida por persistência. O custo conhecido foi US$ 0,2945185492, com duas chamadas sem custo completo registrado; não é custo total exato. Essa rodada é evidência exploratória, não resultado definitivo.
-
-A auditoria posterior do DPy 1.7.8 Trial em 36 exemplos mínimos e no arquivo MusicCast reproduziu todas as 18 ocorrências históricas do arquivo, incluindo dez Statement e zero Chain. Ela revelou diferenças de escopo nos prompts. As regras foram corrigidas diretamente no simples/completo e reutilizadas pelo agente único. No diagnóstico pago seguinte, Chain retornou zero ocorrências sem truncar (antes, 12 FP); Statement teve 9 TP, 3 FP e 1 FN (antes da correção de escopo: 9 TP, 8 FP, 1 FN), precisando de recuperação. A comparação é contra DPy bruto completo desse arquivo, fora da pontuação oficial das células selecionadas. Dois especialistas custaram US$ 0,0137619104. Uma rodada/arquivo de desenvolvimento não demonstra desempenho geral.
-
-Depois disso, as referências ao nome/versão do detector foram retiradas dos textos enviados às LLMs, mantendo regras explícitas. A recuperação foi padronizada em 32.768 tokens. A versão atual passou nos 143 testes offline; a auditoria dos 603 pares e o dry-run das 12 condições nos 182 arquivos também foram exercitados na preparação da coleta. Os manifestos ativos estão em `experiment/final/`. Esses checks validam a configuração e as garantias exercitadas, sem garantir ausência de falhas nos serviços externos ou antecipar o desempenho da coleta definitiva.
-
-Congelamento é uma decisão do autor. Seus hashes, runtime, seleção e referências tornam alterações detectáveis; serviços externos/aliases não são congeláveis localmente. Qualquer mudança posterior de fonte, prompt ou insumo requer nova decisão de versão, sem sobrescrever o histórico. 
+O código atual não gera nem exige SHA. Os campos de hash dos artefatos históricos são ignorados na leitura e permanecem intactos nos arquivos originais. Checkpoints, logs, métricas, validação de estrutura e conferência dos parâmetros de retomada continuam disponíveis; não há mais verificação criptográfica de alterações de conteúdo. A análise compara diretamente a seleção e a referência entre condições.

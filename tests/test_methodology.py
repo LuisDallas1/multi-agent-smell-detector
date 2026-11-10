@@ -3,7 +3,6 @@ import ast
 import asyncio
 from contextlib import redirect_stdout
 import csv
-import hashlib
 import io
 import json
 from pathlib import Path
@@ -147,7 +146,7 @@ class MethodologyTests(unittest.TestCase):
             run.mkdir()
             code = dataset/'x.py'
             code.write_text('def f(a,b,c,d,e):\n    pass\n', encoding='utf-8')
-            files = [dict(File='x.py', sha256=hashlib.sha256(code.read_bytes()).hexdigest())]
+            files = [dict(File='x.py')]
             pairs, truths = root/'pairs.csv', root/'truth.csv'
             pairs.write_text('File,Smell,Count\nx.py,long parameter list,1\nx.py,magic number,0\n', encoding='utf-8')
             truths.write_text('File,Smell,Line no,Method,Description\nx.py,Long parameter list,1,f,f has 5 parameters.\n', encoding='utf-8')
@@ -163,7 +162,7 @@ class MethodologyTests(unittest.TestCase):
                 result = evaluate_run(run)['results'][0]['occurrence']
             self.assertEqual((result['tp'], result['fp'], result['fn']), (1, 1, 0))
             (run/'evaluation_reference.csv').write_text('changed', encoding='utf-8')
-            with self.assertRaisesRegex(ValueError, 'alterado'):
+            with self.assertRaisesRegex(ValueError, 'divergentes'):
                 evaluate_run(run)
 
     def test_runner_saves_scope_and_computes_f1_automatically(self):
@@ -182,7 +181,7 @@ class MethodologyTests(unittest.TestCase):
             dataset.mkdir()
             code = dataset/'x.py'
             code.write_text('def f(a,b,c,d,e):\n    pass\n', encoding='utf-8')
-            files = [dict(File='x.py', sha256=hashlib.sha256(code.read_bytes()).hexdigest())]
+            files = [dict(File='x.py')]
             pairs, truths = root/'pairs.csv', root/'truth.csv'
             pairs.write_text('File,Smell,Count\nx.py,long parameter list,1\n', encoding='utf-8')
             truths.write_text('File,Smell,Line no,Method,Description\nx.py,Long parameter list,1,f,f has 5 parameters.\n', encoding='utf-8')

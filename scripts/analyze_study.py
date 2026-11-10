@@ -2,7 +2,6 @@
 import argparse
 from collections import Counter, defaultdict
 import csv
-import hashlib
 import html
 import itertools
 import json
@@ -91,16 +90,9 @@ def attempts_for(folder,metrics):
     return list(rows.values()),raw if raw_available else None,events_available
 
 
-def condition(run,path):
+def condition(run,path,dataset=None):
     selection=load(run/'sample.json');files={f['File']:f for f in selection['files']}
-    dataset=Path(selection['dataset']);config=load(run/'config.json')
-    for rel,item in files.items():
-        if hashlib.sha256((dataset/rel).read_bytes()).hexdigest()!=item['sha256']:
-            raise ValueError(f'Arquivo mudou: {rel}')
-    provenance=run/'evaluation_scope.json'
-    if provenance.exists():
-        for name,expected in load(provenance)['saved_hashes'].items():
-            if hashlib.sha256((run/name).read_bytes()).hexdigest()!=expected:raise ValueError('Referencia salva alterada')
+    dataset=Path(dataset or selection['dataset']);config=load(run/'config.json')
     reference=Reference(dataset,run/'evaluation_reference.csv');scope={}
     for row in read_csv(run/'evaluation_pairs.csv'):scope.setdefault(row['File'],{})[row['Smell'].lower()]=int(row['Count'])
     reference.validate(scope)
@@ -192,8 +184,9 @@ def condition(run,path):
         macro_recall=statistics.mean(x['recall'] or 0 for x in active) if active else None,
         weighted_f1=ratio(sum((x['f1'] or 0)*x['support'] for x in by_smell),sum(x['support'] for x in by_smell)),
         out_of_scope=evaluation['out_of_scope'])
-    cohort=hashlib.sha256(json.dumps(dict(files={r:f['sha256'] for r,f in files.items()},scope=scope,
-        truth=read_csv(run/'evaluation_reference.csv')),sort_keys=True).encode()).hexdigest()
+    # Compare the actual selection and reference directly, without fingerprints.
+    cohort=json.dumps(dict(files=sorted(files),scope=scope,
+        truth=read_csv(run/'evaluation_reference.csv')),sort_keys=True)
     return dict(id=key,model=model,architecture=architecture,prompt=prompt,run=str(run),directory=str(folder),
         cohort=cohort,primary=primary,valid_only_occurrence=occurrence(valid_counts['tp'],valid_counts['fp'],valid_counts['fn']),
         valid_only_presence=presence(**{k:presence_counts[k] for k in ('tp','fp','fn','tn')}),
@@ -251,7 +244,7 @@ def comparisons(conditions,bootstrap):
     return rows
 
 
-def analyze(study,output=None,iterations=10000,seed=20261106):
+def analyze(study,output=None,iterations=10000,seed=20261106,dataset=None):
     study=Path(study).resolve();output=Path(output or study/'analysis').resolve()
     configs=[]
     for path in sorted(study.rglob('config.json')):
@@ -259,7 +252,7 @@ def analyze(study,output=None,iterations=10000,seed=20261106):
         if 'architecture' in item and 'parameters' in item:configs.append(path.parent)
     conditions=[]
     for run in configs:
-        for path in result_files(run):conditions.append(condition(run,path))
+        for path in result_files(run):conditions.append(condition(run,path,dataset=dataset))
     if not conditions:raise ValueError('Nenhuma condicao com resultados salvos')
     identifiers=[c['id'] for c in conditions]
     if len(set(identifiers))!=len(identifiers):raise ValueError('Mais de uma rodada por condicao: selecione uma matriz, sem misturar repeticoes')
@@ -335,9 +328,9 @@ def analyze(study,output=None,iterations=10000,seed=20261106):
             inputs.extend([result,*result.parent.glob('file_metrics_*.json'),*result.parent.glob('token_usage_*.json')])
             inputs.extend((result.parent/'evidence').rglob('head.json'))
     provenance=dict(version=VERSION,bootstrap=report['bootstrap'],
-        sources_sha256={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in
-            [Path(__file__),BASE/'scripts/study_metrics.py',BASE/'scripts/experiment_evaluation.py',BASE/'scripts/evaluate_results.py']},
-        inputs_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(inputs))})
+        sources=[p.name for p in [Path(__file__),BASE/'scripts/study_metrics.py',
+            BASE/'scripts/experiment_evaluation.py',BASE/'scripts/evaluate_results.py']],
+        inputs=[str(p) for p in sorted(set(inputs))])
     save(output/'analysis_provenance.json',provenance)
     save(output/'summary.json',report)
     save(output/'uncertainty.json',dict(parameters=report['bootstrap'],conditions=uncertainty,comparisons=pairs))
@@ -374,9 +367,10 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--study',type=Path,required=True)
     parser.add_argument('--output',type=Path)
+    parser.add_argument('--dataset',type=Path,help='dataset local; substitui caminhos historicos sem editar os resultados')
     parser.add_argument('--bootstrap',type=int,default=10000)
     parser.add_argument('--seed',type=int,default=20261106)
     args=parser.parse_args()
     if args.bootstrap<2:parser.error('--bootstrap deve ser >=2')
-    result=analyze(args.study,args.output,args.bootstrap,args.seed)
+    result=analyze(args.study,args.output,args.bootstrap,args.seed,dataset=args.dataset)
     print(json.dumps({k:result[k] for k in ('conditions','all_tasks_valid','known_cost_usd','total_cost_usd','cost_complete')},indent=2))

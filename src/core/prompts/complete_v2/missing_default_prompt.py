@@ -1,7 +1,6 @@
 """Prompt do especialista alinhado ao protocolo DPy; estrutura original preservada."""
 
 MISSING_DEFAULT_AGENT_PROMPT = """Você detecta Missing Default (match-case sem case _).
-Referência: CWE-478 (MITRE).
 
 ## DEFINIÇÃO:
 Bloco match-case sem caso padrão (case _), podendo causar comportamento indefinido.
