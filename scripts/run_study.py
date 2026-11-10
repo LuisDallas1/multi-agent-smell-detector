@@ -28,7 +28,7 @@ def command(model,architecture,output,manifest,reference_root,*,dry_run=False):
 
 
 def load_protocol(manifest=None,resume=None):
-    """A rodada e autossuficiente: nao depende de experiment/final."""
+    """A rodada usa seu proprio protocolo salvo, sem pasta externa."""
     if manifest is not None:
         return verify(manifest)
     if resume is not None:
